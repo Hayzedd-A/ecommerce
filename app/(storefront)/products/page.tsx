@@ -3,6 +3,7 @@ import dbConnect from "@/lib/db/connect";
 import Product from "@/lib/db/models/Product";
 import Category from "@/lib/db/models/Category";
 import ProductCard from "@/components/storefront/ProductCard";
+import Link from "next/link";
 
 // Mock Fallback Products
 const MOCK_PRODUCTS = [
@@ -132,9 +133,8 @@ export default async function ProductsListingPage({ searchParams }: ListingPageP
           <div className="flex flex-col gap-2">
             <Link
               href="/products"
-              className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${
-                !params.category ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
-              }`}
+              className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${!params.category ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
+                }`}
             >
               All Categories
             </Link>
@@ -142,9 +142,8 @@ export default async function ProductsListingPage({ searchParams }: ListingPageP
               <Link
                 key={cat._id}
                 href={`/products?category=${cat.slug}${params.sort ? `&sort=${params.sort}` : ""}`}
-                className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${
-                  params.category === cat.slug ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
-                }`}
+                className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${params.category === cat.slug ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
+                  }`}
               >
                 {cat.name}
               </Link>
@@ -162,31 +161,28 @@ export default async function ProductsListingPage({ searchParams }: ListingPageP
             <div className="flex items-center gap-2">
               <Link
                 href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=latest`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${
-                  params.sort !== "price_asc" && params.sort !== "price_desc" && params.sort !== "rating"
+                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort !== "price_asc" && params.sort !== "price_desc" && params.sort !== "rating"
                     ? "bg-foreground text-background border-foreground"
                     : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Latest
               </Link>
               <Link
                 href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=price_asc`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${
-                  params.sort === "price_asc"
+                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort === "price_asc"
                     ? "bg-foreground text-background border-foreground"
                     : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Price: Low to High
               </Link>
               <Link
                 href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=price_desc`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${
-                  params.sort === "price_desc"
+                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort === "price_desc"
                     ? "bg-foreground text-background border-foreground"
                     : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                }`}
+                  }`}
               >
                 Price: High to Low
               </Link>

@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from "lucide-react";
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
-import { toggleCartDrawer, closeCartDrawer } from "@/lib/store/slices/uiSlice";
+import { toggleCartDrawer, closeModal } from "@/lib/store/slices/uiSlice";
 import { updateQuantity, removeFromCart } from "@/lib/store/slices/cartSlice";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { Button } from "../ui/Button";
@@ -14,17 +14,17 @@ import { Button } from "../ui/Button";
 export default function CartDrawer() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  
+
   const isOpen = useAppSelector((state) => state.ui.isCartDrawerOpen);
   const { items, subtotal } = useAppSelector((state) => state.cart);
-  
+
   const drawerRef = useRef<HTMLDivElement>(null);
 
   // Close drawer on clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
       if (isOpen && drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
-        dispatch(closeCartDrawer());
+        dispatch(closeModal());
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -40,7 +40,7 @@ export default function CartDrawer() {
   };
 
   const handleCheckout = () => {
-    dispatch(closeCartDrawer());
+    dispatch(closeModal());
     router.push("/checkout");
   };
 
@@ -77,7 +77,7 @@ export default function CartDrawer() {
               </div>
               <Button
                 variant="secondary"
-                onClick={() => dispatch(closeCartDrawer())}
+                onClick={() => dispatch(closeModal())}
                 className="rounded-full px-6"
               >
                 Continue Shopping
@@ -163,7 +163,7 @@ export default function CartDrawer() {
             <div className="grid grid-cols-2 gap-3 mt-4">
               <Button
                 variant="secondary"
-                onClick={() => dispatch(closeCartDrawer())}
+                onClick={() => dispatch(closeModal())}
                 className="w-full py-3"
               >
                 View Cart

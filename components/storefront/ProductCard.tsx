@@ -30,13 +30,13 @@ interface ProductCardProps {
 export default function ProductCard({ product }: ProductCardProps) {
   const dispatch = useAppDispatch();
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
-  
+
   const isWishlisted = wishlistItems.some((id) => id === product._id);
   const primaryImage = product.images?.[0]?.url || "";
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigating to detail page on button click
-    
+
     if (product.stock < 1) {
       toast.error("This product is out of stock");
       return;
@@ -73,7 +73,7 @@ export default function ProductCard({ product }: ProductCardProps) {
       <Link href={`/products/${product.slug}`} className="relative block aspect-square w-full overflow-hidden bg-white">
         {/* Gradients */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent z-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-        
+
         {/* Image */}
         {primaryImage ? (
           // eslint-disable-next-line @next/next/no-img-element

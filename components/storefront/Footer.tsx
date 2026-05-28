@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Mail, Phone, MapPin, Facebook, Instagram, Twitter, MessageCircle } from "lucide-react";
+import { Mail, Phone, MapPin, MessageCircle } from "lucide-react";
 
 export default function Footer() {
   const currentYear = new Date().getFullYear();
@@ -19,13 +19,13 @@ export default function Footer() {
             </p>
             <div className="flex items-center gap-3">
               <a href="#" className="p-2 rounded-full hover:bg-border text-muted-foreground hover:text-primary-500 transition-colors">
-                <Facebook className="h-4 w-4" />
+                {/* <Facebook className="h-4 w-4" /> */}
               </a>
               <a href="#" className="p-2 rounded-full hover:bg-border text-muted-foreground hover:text-accent-500 transition-colors">
-                <Instagram className="h-4 w-4" />
+                {/* <Instagram className="h-4 w-4" /> */}
               </a>
               <a href="#" className="p-2 rounded-full hover:bg-border text-muted-foreground hover:text-primary-400 transition-colors">
-                <Twitter className="h-4 w-4" />
+                {/* <Twitter className="h-4 w-4" /> */}
               </a>
               <a href="#" className="p-2 rounded-full hover:bg-border text-muted-foreground hover:text-success-500 transition-colors">
                 <MessageCircle className="h-4 w-4" />
