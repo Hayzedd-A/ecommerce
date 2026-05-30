@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { jwtVerify } from "jose";
+import { adminPaths, authPaths, protectedPaths } from "./lib/api/client";
 
 /* -------------------------------------------------------------------------- */
 /*  Next.js 16 Proxy — replaces middleware.ts                                  */
@@ -8,22 +9,11 @@ import { jwtVerify } from "jose";
 /* -------------------------------------------------------------------------- */
 
 const accessSecret = new TextEncoder().encode(
-  process.env.JWT_ACCESS_SECRET || "fallback-secret-change-me"
+  process.env.JWT_ACCESS_SECRET || "fallback-secret-change-me",
 );
 
-/** Routes that require authentication */
-const protectedPaths = ["/account"];
-
-/** Routes that require admin role */
-const adminPaths = ["/admin"];
-
-/** Routes that authenticated users should NOT see */
-const authPaths = ["/login", "/register", "/forgot-password", "/reset-password"];
-
 function matchesPath(pathname: string, paths: string[]): boolean {
-  return paths.some(
-    (p) => pathname === p || pathname.startsWith(`${p}/`)
-  );
+  return paths.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
 export async function proxy(request: NextRequest) {

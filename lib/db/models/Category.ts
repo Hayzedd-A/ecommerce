@@ -26,7 +26,6 @@ const CategorySchema = new Schema<ICategoryDocument>(
     },
     slug: {
       type: String,
-      required: true,
       unique: true,
       lowercase: true,
       trim: true,
@@ -57,7 +56,7 @@ const CategorySchema = new Schema<ICategoryDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /* Indexes */

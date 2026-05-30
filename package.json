@@ -1,11 +1,11 @@
 {
-  "name": "--ecommerce",
+  "name": "ecommerce",
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --port=3110",
     "build": "next build",
-    "start": "next start",
+    "start": "next start --port=3110",
     "lint": "eslint"
   },
   "dependencies": {
@@ -23,6 +23,7 @@
     "lucide-react": "^1.17.0",
     "mongoose": "^9.6.3",
     "next": "16.2.6",
+    "next-themes": "^0.4.6",
     "nodemailer": "^8.0.9",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -33,6 +34,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@next/swc-linux-x64-gnu": "^16.2.6",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^20",

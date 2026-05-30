@@ -5,8 +5,26 @@
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/utils/constants";
 
+/** Routes that require authentication */
+export const protectedPaths = ["/account"];
+
+/** Routes that require admin role */
+export const adminPaths = ["/admin"];
+
+/** Routes that authenticated users should NOT see */
+export const authPaths = [
+  "/login",
+  "/register",
+  "/forgot-password",
+  "/reset-password",
+];
+
+export const isPublicRoute = (path: string) => {
+  return ![...protectedPaths, ...adminPaths].some((p) => path.includes(p));
+};
+
 const apiClient = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
+  baseURL: typeof window === "undefined" ? `${API_BASE_URL}/api` : "/api",
   headers: {
     "Content-Type": "application/json",
   },
@@ -24,7 +42,7 @@ apiClient.interceptors.response.use(
       error.response?.status === 401 &&
       !originalRequest._retry &&
       !originalRequest.url?.includes("/auth/refresh") &&
-      !originalRequest.url?.includes("/auth/login")
+      !isPublicRoute(originalRequest.url)
     ) {
       originalRequest._retry = true;
 
@@ -32,13 +50,16 @@ apiClient.interceptors.response.use(
         await axios.post(
           `${API_BASE_URL}/api/auth/refresh`,
           {},
-          { withCredentials: true }
+          { withCredentials: true },
         );
         // Retry original request with new token
         return apiClient(originalRequest);
       } catch {
         // Refresh failed — redirect to login
-        if (typeof window !== "undefined") {
+        const isAuth = authPaths.find((path) =>
+          window.location.pathname.includes(path),
+        );
+        if (typeof window !== "undefined" && !isAuth) {
           window.location.href = "/login";
         }
         return Promise.reject(error);
@@ -46,7 +67,7 @@ apiClient.interceptors.response.use(
     }
 
     return Promise.reject(error);
-  }
+  },
 );
 
 export default apiClient;

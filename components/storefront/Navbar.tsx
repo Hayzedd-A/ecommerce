@@ -3,23 +3,37 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ShoppingCart, Heart, User, Sun, Moon, Menu, X, Search, LogOut, LayoutDashboard } from "lucide-react";
+import {
+  ShoppingCart,
+  Heart,
+  User,
+  Menu,
+  X,
+  Search,
+  LogOut,
+  LayoutDashboard,
+  Sun,
+  Moon,
+} from "lucide-react";
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
-import { useTheme } from "../providers/ThemeProvider";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
+// import { useTheme } from "../providers/ThemeProvider";
 import { clearUser } from "@/lib/store/slices/authSlice";
 import { toggleCartDrawer } from "@/lib/store/slices/uiSlice";
 import apiClient from "@/lib/api/client";
 import { toast } from "react-hot-toast";
+import { useTheme } from "next-themes";
 
 export default function Navbar() {
   const router = useRouter();
   const dispatch = useAppDispatch();
-  const { theme, toggleTheme } = useTheme();
-  
+  const { theme, setTheme } = useTheme();
+
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const { items } = useAppSelector((state) => state.cart);
   const { items: wishlistItems } = useAppSelector((state) => state.wishlist);
+  const { settings } = useStoreSettings();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -53,12 +67,15 @@ export default function Navbar() {
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent group-hover:opacity-85 transition-opacity">
-            STOREFRONT
+            {settings?.storeName ?? "STOREFRONT"}
           </span>
         </Link>
 
         {/* Search Bar - Desktop */}
-        <form onSubmit={handleSearchSubmit} className="hidden md:flex items-center relative flex-1 max-w-md">
+        <form
+          onSubmit={handleSearchSubmit}
+          className="hidden md:flex items-center relative flex-1 max-w-md"
+        >
           <input
             type="text"
             placeholder="Search products, categories..."
@@ -72,23 +89,29 @@ export default function Navbar() {
         {/* Navigation Actions */}
         <nav className="hidden md:flex items-center gap-4 text-foreground">
           {/* Admin link for admin/staff */}
-          {isAuthenticated && user && (user.role === "admin" || user.role === "staff") && (
-            <Link
-              href="/admin"
-              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
-              title="Admin Dashboard"
-            >
-              <LayoutDashboard className="h-5 w-5" />
-            </Link>
-          )}
+          {isAuthenticated &&
+            user &&
+            (user.role === "admin" || user.role === "staff") && (
+              <Link
+                href="/admin"
+                className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
+                title="Admin Dashboard"
+              >
+                <LayoutDashboard className="h-5 w-5" />
+              </Link>
+            )}
 
           {/* Theme Toggle */}
           <button
-            onClick={toggleTheme}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
             title="Toggle Theme"
           >
-            {theme === "dark" ? <Sun className="h-5 w-5 text-warning-500" /> : <Moon className="h-5 w-5" />}
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5 text-warning-500" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
           </button>
 
           {/* Wishlist */}
@@ -130,13 +153,13 @@ export default function Navbar() {
                   {user?.name?.[0] || "U"}
                 </div>
               </Link>
-              <button
+              {/* <button
                 onClick={handleLogout}
                 className="ml-2 p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-error-500 transition-all cursor-pointer"
                 title="Sign Out"
               >
                 <LogOut className="h-4 w-4" />
-              </button>
+              </button> */}
             </div>
           ) : (
             <Link
@@ -152,10 +175,14 @@ export default function Navbar() {
         {/* Mobile Header Buttons */}
         <div className="flex md:hidden items-center gap-2">
           <button
-            onClick={toggleTheme}
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground"
           >
-            {theme === "dark" ? <Sun className="h-5 w-5 text-warning-500" /> : <Moon className="h-5 w-5" />}
+            {theme === "dark" ? (
+              <Sun className="h-5 w-5 text-warning-500" />
+            ) : (
+              <Moon className="h-5 w-5" />
+            )}
           </button>
 
           <button
@@ -174,7 +201,11 @@ export default function Navbar() {
             onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
             className="p-2 rounded-full hover:bg-surface-secondary text-foreground"
           >
-            {isMobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            {isMobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
           </button>
         </div>
       </div>

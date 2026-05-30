@@ -23,8 +23,13 @@ export default function CartDrawer() {
   // Close drawer on clicking outside
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
-      if (isOpen && drawerRef.current && !drawerRef.current.contains(e.target as Node)) {
+      if (
+        isOpen &&
+        drawerRef.current &&
+        !drawerRef.current.contains(e.target as Node)
+      ) {
         dispatch(closeModal());
+        dispatch(toggleCartDrawer());
       }
     };
     document.addEventListener("mousedown", handleOutsideClick);
@@ -33,14 +38,19 @@ export default function CartDrawer() {
 
   if (!isOpen) return null;
 
-  const handleQtyChange = (productId: string, variantId: string | undefined, currentQty: number, change: number) => {
+  const handleQtyChange = (
+    productId: string,
+    variantId: string | undefined,
+    currentQty: number,
+    change: number,
+  ) => {
     const newQty = currentQty + change;
     if (newQty < 1) return;
     dispatch(updateQuantity({ productId, variantId, quantity: newQty }));
   };
 
   const handleCheckout = () => {
-    dispatch(closeModal());
+    dispatch(toggleCartDrawer());
     router.push("/checkout");
   };
 
@@ -72,12 +82,16 @@ export default function CartDrawer() {
                 <ShoppingBag className="h-8 w-8" />
               </div>
               <div>
-                <h3 className="font-bold text-foreground">Your cart is empty</h3>
-                <p className="text-sm text-muted-foreground mt-1">Add items to get started!</p>
+                <h3 className="font-bold text-foreground">
+                  Your cart is empty
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Add items to get started!
+                </p>
               </div>
               <Button
                 variant="secondary"
-                onClick={() => dispatch(closeModal())}
+                onClick={() => dispatch(toggleCartDrawer())}
                 className="rounded-full px-6"
               >
                 Continue Shopping
@@ -93,7 +107,11 @@ export default function CartDrawer() {
                 <div className="h-20 w-20 rounded-lg overflow-hidden border bg-white flex-shrink-0 flex items-center justify-center">
                   {item.image ? (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={item.image} alt={item.name} className="h-full w-full object-cover" />
+                    <img
+                      src={item.image}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                    />
                   ) : (
                     <ShoppingBag className="h-6 w-6 text-muted" />
                   )}
@@ -102,7 +120,9 @@ export default function CartDrawer() {
                 {/* Details */}
                 <div className="flex-1 flex flex-col justify-between min-w-0">
                   <div className="space-y-0.5">
-                    <h4 className="font-semibold text-sm text-foreground truncate">{item.name}</h4>
+                    <h4 className="font-semibold text-sm text-foreground truncate">
+                      {item.name}
+                    </h4>
                     {item.variantLabel && (
                       <span className="inline-block text-[11px] font-medium text-muted-foreground uppercase bg-surface border px-2 py-0.5 rounded-full">
                         {item.variantLabel}
@@ -114,7 +134,14 @@ export default function CartDrawer() {
                     {/* Quantity Selector */}
                     <div className="flex items-center border border-border rounded-lg bg-surface">
                       <button
-                        onClick={() => handleQtyChange(item.productId, item.variantId, item.quantity, -1)}
+                        onClick={() =>
+                          handleQtyChange(
+                            item.productId,
+                            item.variantId,
+                            item.quantity,
+                            -1,
+                          )
+                        }
                         className="p-1 hover:bg-surface-secondary text-muted-foreground hover:text-foreground rounded-l-lg transition-colors cursor-pointer"
                       >
                         <Minus className="h-3.5 w-3.5" />
@@ -123,7 +150,14 @@ export default function CartDrawer() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => handleQtyChange(item.productId, item.variantId, item.quantity, 1)}
+                        onClick={() =>
+                          handleQtyChange(
+                            item.productId,
+                            item.variantId,
+                            item.quantity,
+                            1,
+                          )
+                        }
                         className="p-1 hover:bg-surface-secondary text-muted-foreground hover:text-foreground rounded-r-lg transition-colors cursor-pointer"
                       >
                         <Plus className="h-3.5 w-3.5" />
@@ -136,7 +170,14 @@ export default function CartDrawer() {
                         {formatCurrency(item.price * item.quantity)}
                       </span>
                       <button
-                        onClick={() => dispatch(removeFromCart({ productId: item.productId, variantId: item.variantId }))}
+                        onClick={() =>
+                          dispatch(
+                            removeFromCart({
+                              productId: item.productId,
+                              variantId: item.variantId,
+                            }),
+                          )
+                        }
                         className="p-1.5 rounded-lg hover:bg-error-50 text-muted-foreground hover:text-error-500 transition-colors cursor-pointer"
                         title="Remove Item"
                       >

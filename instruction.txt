@@ -1,0 +1,483 @@
+Build a production-ready reusable ecommerce platform using Next.js for small and sole-owner businesses.
+
+The platform must be designed as a generic single-tenant ecommerce solution that can be deployed independently for different businesses using the same codebase with customizable settings and branding.
+
+TECH STACK
+
+Frontend:
+- Next.js latest App Router
+- TypeScript
+- TailwindCSS
+- Zustand or Redux Toolkit for state management
+- TanStack Query for server state management
+- React Hook Form + Zod for forms and validation
+
+Backend:
+- Next.js API routes or modular backend architecture inside Next.js
+- mongoose ORM
+- MongoDB database
+
+Authentication:
+- JWT authentication with refresh token support
+- Role-based authentication
+- Protected admin routes
+- Password hashing using bcrypt
+
+Storage:
+- Cloudinary integration for image uploads
+
+Payments:
+- Monnify payment gateway integration
+- Payment initialization
+- Payment verification
+- Webhook verification
+- Transaction re-query
+- Failed payment handling
+- Duplicate webhook protection
+
+GENERAL REQUIREMENTS
+
+- Mobile-first responsive design
+- Production-ready folder structure
+- Reusable architecture
+- Modular component structure
+- Clean scalable architecture
+- SEO-friendly
+- Optimized performance
+- Image optimization
+- Lazy loading where necessary
+- Pagination support
+- Toast notifications
+- Loading and error states
+- Proper form validation
+- API error handling
+- Type-safe APIs
+- Environment variable support
+- Reusable UI components
+- Accessibility best practices
+
+APPLICATION STRUCTURE
+
+The application should contain:
+
+1. Public Storefront
+2. Admin Dashboard
+3. Authentication System
+4. System Settings Layer
+
+==================================================
+PUBLIC STOREFRONT FEATURES
+==================================================
+
+HOMEPAGE
+
+- Hero section
+- Featured products banner slider
+- Sponsored products carousel
+- Product categories section
+- New arrivals section
+- Best-selling products section
+- Recently viewed products section
+- Search functionality
+- Responsive navigation bar
+- Footer with configurable store info
+
+PRODUCT SYSTEM
+
+Products must support:
+- Name
+- Slug
+- Description
+- Short description
+- Price
+- Discount price
+- Product SKU
+- Product images (multiple images)
+- Product category
+- Product subcategory
+- Product tags
+- Product variants
+- Featured status
+- Sponsored status
+- Stock quantity
+- Low stock threshold
+- Product availability status
+- SEO metadata
+- Product specifications
+- Product weight
+- Product dimensions
+- Product reviews
+- Average rating
+- Related products
+
+PRODUCT VARIANTS
+
+Support:
+- Color variants
+- Size variants
+- Material variants
+- Variant-specific pricing
+- Variant-specific stock
+- Variant-specific images
+
+PRODUCT LISTING PAGE
+
+Include:
+- Pagination
+- Search
+- Sorting
+- Filtering by:
+  - category
+  - price
+  - availability
+  - featured products
+  - rating
+  - newest
+
+PRODUCT DETAILS PAGE
+
+Include:
+- Product image gallery
+- Product details
+- Variant selection
+- Quantity selector
+- Add to cart
+- Add to favorites
+- Product reviews
+- Related products
+- Stock status
+- Social share buttons
+
+FAVORITES/WISHLIST
+
+- Add to favorites
+- Remove from favorites
+- Persist favorites for authenticated users
+
+CART MANAGEMENT
+
+Include:
+- Add to cart
+- Remove from cart
+- Update quantity
+- Variant-aware cart items
+- Persist cart for authenticated users
+- Cart subtotal
+- Delivery fee
+- Total calculation
+- Coupon support
+- Clear cart
+
+CHECKOUT SYSTEM
+
+Include:
+- Guest checkout
+- Authenticated checkout
+- Shipping information
+- Delivery location selection
+- Delivery fee calculation
+- Order summary
+- Monnify payment integration
+- Payment verification
+- Order creation after successful payment
+
+ORDER COMPLETION
+
+After successful payment:
+- Generate order
+- Send confirmation email
+- Send WhatsApp order summary
+- Show order success page
+- Save payment transaction details
+
+USER ACCOUNT SYSTEM
+
+Users should be able to:
+- Register
+- Login
+- Logout
+- Reset password
+- Update profile
+- Change password
+- View order history
+- View order details
+- Manage addresses
+- Manage wishlist
+
+==================================================
+ADMIN DASHBOARD FEATURES
+==================================================
+
+ADMIN AUTHENTICATION
+
+- Secure login
+- Role-based access
+- Session protection
+- Refresh tokens
+
+DASHBOARD ANALYTICS
+
+Show:
+- Total sales
+- Total revenue
+- Total orders
+- Total customers
+- Pending orders
+- Processing orders
+- Completed orders
+- Low stock products
+- Recent orders
+- Sales charts
+
+PRODUCT MANAGEMENT
+
+Admin should be able to:
+- Create product
+- Edit product
+- Delete/archive product
+- Upload multiple images
+- Manage variants
+- Manage stock
+- Mark products as featured
+- Mark products as sponsored
+- Set discount pricing
+- Manage SEO metadata
+
+CATEGORY MANAGEMENT
+
+- Create categories
+- Edit categories
+- Delete/archive categories
+- Nested categories support
+
+ORDER MANAGEMENT
+
+Admin should be able to:
+- View all orders
+- View order details
+- Update order status
+
+Order statuses:
+- Pending Payment
+- Paid
+- Processing
+- Ready for Pickup
+- Completed
+- Cancelled
+
+- Search orders
+- Filter orders
+- Print order invoice
+
+PAYMENT MANAGEMENT
+
+Admin should be able to:
+- View initiated payments
+- View successful payments
+- View failed payments
+- View transaction details
+- Re-query payment status
+
+USER MANAGEMENT
+
+Admin should be able to:
+- View users
+- Search users
+- Suspend users
+- View customer orders
+
+REVIEW MANAGEMENT
+
+Admin should be able to:
+- Approve reviews
+- Delete reviews
+- Moderate reviews
+
+BANNER MANAGEMENT
+
+Admin should be able to:
+- Upload homepage banners
+- Create sponsored banners
+- Attach products to banners
+- Control banner order
+- Enable/disable banners
+
+COUPON MANAGEMENT
+
+Support:
+- Percentage discounts
+- Fixed discounts
+- Expiration dates
+- Usage limits
+- Minimum purchase amount
+
+NOTIFICATION SYSTEM
+
+Admin notifications:
+- New orders
+- Failed payments
+- Low stock alerts
+
+Customer notifications:
+- Payment success
+- Order status updates
+- Order confirmation
+
+Support:
+- Email notifications
+- WhatsApp notifications
+
+==================================================
+SYSTEM SETTINGS
+==================================================
+
+Admin should be able to configure:
+
+STORE SETTINGS
+- Store name
+- Store logo
+- Store description
+- Store address
+- Phone number
+- Email
+- Social media links
+- Business hours
+
+THEME SETTINGS
+- Primary color
+- Secondary color
+- Homepage banners
+- Footer content
+
+SEO SETTINGS
+- Meta title
+- Meta description
+- OpenGraph image
+- Favicon
+
+DELIVERY SETTINGS
+- Delivery fees
+- Delivery locations
+- Pickup options
+
+PAYMENT SETTINGS
+- Monnify API keys
+- Payment mode
+
+==================================================
+DATABASE REQUIREMENTS
+==================================================
+
+Create scalable mongoose schema models for:
+- Users
+- Roles
+- Products
+- ProductVariants
+- ProductImages
+- Categories
+- Tags
+- Orders
+- OrderItems
+- Payments
+- Reviews
+- Wishlists
+- Coupons
+- Notifications
+- StoreSettings
+- Banners
+- Addresses
+
+Use proper relationships and indexing.
+
+==================================================
+API REQUIREMENTS
+==================================================
+
+Build RESTful or modular APIs for:
+- Authentication
+- Products
+- Categories
+- Orders
+- Payments
+- Users
+- Reviews
+- Wishlist
+- Notifications
+- Store settings
+- Coupons
+- Banners
+
+Include:
+- Validation
+- Pagination
+- Filtering
+- Search
+- Rate limiting
+- Error handling
+
+==================================================
+UI/UX REQUIREMENTS
+==================================================
+
+Design requirements:
+- Modern ecommerce UI
+- Clean spacing
+- Professional design
+- Fast interactions
+- Smooth transitions
+- Skeleton loaders
+- Empty states
+- Error states
+- Mobile responsiveness
+- Tablet responsiveness
+- Desktop responsiveness
+
+==================================================
+SECURITY REQUIREMENTS
+==================================================
+
+Implement:
+- CSRF protection
+- Rate limiting
+- Input sanitization
+- Secure JWT handling
+- Password hashing
+- Secure API routes
+- Role authorization
+- Secure webhook verification
+
+==================================================
+BONUS FEATURES
+==================================================
+
+If possible also include:
+- Recently viewed products
+- Product recommendations
+- Invoice generation
+- Admin activity logs
+- Product import/export
+- Sales report export
+- Dark mode
+- Multi-image drag-and-drop uploader
+
+==================================================
+PROJECT OUTPUT REQUIREMENTS
+==================================================
+
+Generate:
+- Full project structure
+- mongoose schema
+- API routes
+- Database models
+- Reusable UI components
+- Storefront pages
+- Admin dashboard pages
+- Authentication flows
+- Payment integration flow
+- Responsive layouts
+- Seed data
+- Environment variable examples
+- Setup instructions
+- Deployment instructions
+
+The final application must be production-ready, scalable, cleanly structured, and suitable for deployment for multiple independent businesses using the same reusable codebase.

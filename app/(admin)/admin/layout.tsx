@@ -17,14 +17,16 @@ import {
   X,
   Lock,
   ChevronRight,
+  Ticket
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
-import { useTheme } from "@/components/providers/ThemeProvider";
+// import { useTheme } from "@/components/providers/ThemeProvider";
 import { clearUser } from "@/lib/store/slices/authSlice";
 import apiClient from "@/lib/api/client";
 import { cn } from "@/lib/utils/helpers";
+import { useTheme } from "next-themes";
 
 const SIDEBAR_LINKS = [
   { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
@@ -32,16 +34,23 @@ const SIDEBAR_LINKS = [
   { label: "Categories", href: "/admin/categories", icon: FolderOpen },
   { label: "Orders", href: "/admin/orders", icon: ClipboardList },
   { label: "Customers", href: "/admin/customers", icon: Users },
+  { label: "Coupons", href: "/admin/coupons", icon: Ticket },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const router = useRouter();
   const pathname = usePathname();
   const dispatch = useAppDispatch();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
-  const { user, isAuthenticated, isLoading } = useAppSelector((state) => state.auth);
+  const { user, isAuthenticated, isLoading } = useAppSelector(
+    (state) => state.auth,
+  );
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Secure admin routing
@@ -81,9 +90,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-background text-center p-6 space-y-4">
         <Lock className="h-12 w-12 text-error-500" />
-        <h1 className="text-xl font-bold text-foreground">Unauthorized Access</h1>
-        <p className="text-sm text-muted-foreground">You do not have the credentials to view this area.</p>
-        <Link href="/" className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-semibold">
+        <h1 className="text-xl font-bold text-foreground">
+          Unauthorized Access
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          You do not have the credentials to view this area.
+        </p>
+        <Link
+          href="/"
+          className="px-4 py-2 bg-primary-500 hover:bg-primary-600 text-white rounded-lg text-sm font-semibold"
+        >
           Return to Storefront
         </Link>
       </div>
@@ -96,7 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-30 w-64 bg-surface border-r border-border flex flex-col transform transition-transform duration-300 lg:translate-x-0 lg:static",
-          isSidebarOpen ? "translate-x-0" : "-translate-x-full"
+          isSidebarOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
         {/* Brand */}
@@ -128,12 +144,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   "flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 group",
                   isActive
                     ? "bg-primary-500 text-white shadow-soft"
-                    : "text-muted-foreground hover:text-foreground hover:bg-surface-secondary"
+                    : "text-muted-foreground hover:text-foreground hover:bg-surface-secondary",
                 )}
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 <span className="flex-1">{link.label}</span>
-                <ChevronRight className={cn("h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100", isActive && "opacity-100")} />
+                <ChevronRight
+                  className={cn(
+                    "h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100",
+                    isActive && "opacity-100",
+                  )}
+                />
               </Link>
             );
           })}
@@ -147,7 +168,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {user.name[0].toUpperCase()}
             </div>
             <div className="min-w-0">
-              <h4 className="font-bold text-xs text-foreground truncate">{user.name}</h4>
+              <h4 className="font-bold text-xs text-foreground truncate">
+                {user.name}
+              </h4>
               <span className="text-[10px] text-muted-foreground capitalize font-semibold bg-surface border px-1.5 py-0.5 rounded-full mt-0.5 inline-block">
                 {user.role}
               </span>
@@ -178,7 +201,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground uppercase font-bold tracking-wider">
               <span>Admin Portal</span>
               <span>/</span>
-              <span className="text-foreground capitalize">{pathname.split("/").pop() || "Dashboard"}</span>
+              <span className="text-foreground capitalize">
+                {pathname.split("/").pop() || "Dashboard"}
+              </span>
             </div>
           </div>
 
@@ -186,11 +211,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <div className="flex items-center gap-3">
             {/* Theme Toggle */}
             <button
-              onClick={toggleTheme}
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="p-2 rounded-xl hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all cursor-pointer"
               title="Toggle Theme"
             >
-              {theme === "dark" ? <Sun className="h-5 w-5 text-warning-500" /> : <Moon className="h-5 w-5" />}
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 text-warning-500" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
             </button>
 
             {/* Front Store link */}
@@ -204,7 +233,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </header>
 
         {/* Content Body */}
-        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-surface-secondary/40">{children}</main>
+        <main className="flex-1 p-6 md:p-8 overflow-y-auto bg-surface-secondary/40">
+          {children}
+        </main>
       </div>
     </div>
   );

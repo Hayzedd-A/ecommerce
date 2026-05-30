@@ -7,6 +7,8 @@ import Payment from "@/lib/db/models/Payment";
 import { CheckoutSchema } from "@/lib/validators/order.schema";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { generateOrderNumber } from "@/lib/utils/helpers";
+import { AuthService } from "@/lib/services/auth.service";
+import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
 
 export async function POST(req: NextRequest) {
   try {
@@ -20,18 +22,42 @@ export async function POST(req: NextRequest) {
         {
           success: false,
           message: "Validation failed",
-          error: result.error.errors[0].message,
+          error: result.error.issues[0].message,
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    const { shippingAddress, items, notes, couponUsed, isGuest, guestEmail, guestPhone } = result.data;
+    console.log("checkout body: ", body);
+    console.log("result: ", result);
 
-    // Retrieve user identity headers set by proxy.ts
-    const userId = req.headers.get("x-user-id");
-    const userEmail = req.headers.get("x-user-email");
-    const userRole = req.headers.get("x-user-role");
+    const {
+      shippingAddress,
+      items,
+      notes,
+      couponUsed,
+      isGuest,
+      guestEmail,
+      guestPhone,
+    } = result.data;
+
+    // Retrieve user identity from either proxy headers or access token cookie.
+    let userId = req.headers.get("x-user-id");
+    let userEmail = req.headers.get("x-user-email");
+
+    if (!userId) {
+      const accessToken = req.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
+      if (accessToken) {
+        try {
+          const payload = AuthService.verifyAccessToken(accessToken);
+          userId = payload.id;
+          userEmail = payload.email;
+        } catch {
+          userId = null;
+          userEmail = null;
+        }
+      }
+    }
 
     // Recalculate and verify pricing on server
     let subtotal = 0;
@@ -42,15 +68,18 @@ export async function POST(req: NextRequest) {
       if (!dbProduct) {
         return NextResponse.json(
           { success: false, message: `Product not found: ${item.name}` },
-          { status: 400 }
+          { status: 400 },
         );
       }
 
       // Check stock
       if (dbProduct.stock < item.quantity) {
         return NextResponse.json(
-          { success: false, message: `Insufficient stock for product: ${dbProduct.name}` },
-          { status: 400 }
+          {
+            success: false,
+            message: `Insufficient stock for product: ${dbProduct.name}`,
+          },
+          { status: 400 },
         );
       }
 
@@ -133,14 +162,16 @@ export async function POST(req: NextRequest) {
       const name = isGuest ? shippingAddress.fullName : "Store User";
       const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-      const paymentResult = await paymentManager.getProvider("monnify").initializePayment({
-        amount: total,
-        customerEmail: email,
-        customerName: name,
-        paymentReference,
-        callbackUrl: `${appUrl}/api/payments/callback`,
-        description: `Order ${orderNumber} payment`,
-      });
+      const paymentResult = await paymentManager
+        .getProvider("monnify")
+        .initializePayment({
+          amount: total,
+          customerEmail: email,
+          customerName: name,
+          paymentReference,
+          callbackUrl: `${appUrl}/api/payments/callback`,
+          description: `Order ${orderNumber} payment`,
+        });
 
       if (paymentResult.success && paymentResult.checkoutUrl) {
         checkoutUrl = paymentResult.checkoutUrl;
@@ -177,11 +208,12 @@ export async function POST(req: NextRequest) {
         paymentReference,
       });
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Payment initialization error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, message: "Internal server error", error: error.message },
-      { status: 500 }
+      { success: false, message: "Internal server error", error: message },
+      { status: 500 },
     );
   }
 }

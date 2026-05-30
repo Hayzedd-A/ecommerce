@@ -52,6 +52,7 @@ const uiSlice = createSlice({
       state.modalData = action.payload.data ?? null;
     },
     closeModal(state) {
+      console.log("closing modal", state);
       state.activeModal = null;
       state.modalData = null;
     },

@@ -27,18 +27,17 @@ export default function ThemeProvider({
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    const stored = localStorage.getItem("theme") as Theme | null;
-    if (stored) {
-      setThemeState(stored);
-      document.documentElement.setAttribute("data-theme", stored);
-    } else {
-      // Default to user's system preference
-      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const initial = prefersDark ? "dark" : "light";
+    Promise.resolve().then(() => {
+      const stored = localStorage.getItem("theme") as Theme | null;
+      const initial = stored
+        ? stored
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
       setThemeState(initial);
       document.documentElement.setAttribute("data-theme", initial);
-    }
+      setMounted(true);
+    });
   }, []);
 
   const setTheme = (newTheme: Theme) => {
@@ -57,8 +56,8 @@ export default function ThemeProvider({
   }
 
   return (
-    <ThemeContext value={{ theme, toggleTheme, setTheme }}>
+    <ThemeContext.Provider value={{ theme, toggleTheme, setTheme }}>
       {children}
-    </ThemeContext>
+    </ThemeContext.Provider>
   );
 }

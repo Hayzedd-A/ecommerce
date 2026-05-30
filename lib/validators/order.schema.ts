@@ -6,13 +6,13 @@ export const AddressSchema = z.object({
   street: z.string().min(5, "Street address must be at least 5 characters"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
-  country: z.string().default("Nigeria"),
+  country: z.string().optional(),
   zipCode: z.string().optional().or(z.literal("")),
-  isDefault: z.boolean().default(false),
+  isDefault: z.boolean().optional(),
 });
 
 export const OrderItemSchema = z.object({
-  productId: z.string().regex(/^[0-9a-fA-F]{24}$/, "Invalid Product ID"),
+  productId: z.string(),
   variantId: z
     .string()
     .regex(/^[0-9a-fA-F]{24}$/, "Invalid Variant ID")
@@ -30,7 +30,7 @@ export const CheckoutSchema = z
     items: z.array(OrderItemSchema).min(1, "Your cart must contain at least one item"),
     notes: z.string().max(500).optional().or(z.literal("")),
     couponUsed: z.string().optional().or(z.literal("")),
-    isGuest: z.boolean().default(false),
+    isGuest: z.boolean().optional(),
     guestEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
     guestPhone: z
       .string()

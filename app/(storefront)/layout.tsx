@@ -2,6 +2,7 @@ import React from "react";
 import Navbar from "@/components/storefront/Navbar";
 import CartDrawer from "@/components/storefront/CartDrawer";
 import Footer from "@/components/storefront/Footer";
+import ThemeProvider from "@/components/providers/ThemeProvider";
 
 export default function StorefrontLayout({
   children,

@@ -49,7 +49,7 @@ const ProductImageSchema = new Schema(
     alt: String,
     order: { type: Number, default: 0 },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const SeoMetaSchema = new Schema(
@@ -58,7 +58,7 @@ const SeoMetaSchema = new Schema(
     metaDescription: String,
     ogImage: String,
   },
-  { _id: false }
+  { _id: false },
 );
 
 const DimensionsSchema = new Schema(
@@ -68,7 +68,7 @@ const DimensionsSchema = new Schema(
     height: Number,
     unit: { type: String, enum: ["cm", "in"], default: "cm" },
   },
-  { _id: false }
+  { _id: false },
 );
 
 const ProductSchema = new Schema<IProductDocument>(
@@ -82,7 +82,6 @@ const ProductSchema = new Schema<IProductDocument>(
     slug: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -112,7 +111,6 @@ const ProductSchema = new Schema<IProductDocument>(
     sku: {
       type: String,
       required: [true, "SKU is required"],
-      unique: true,
       uppercase: true,
       trim: true,
     },
@@ -159,7 +157,7 @@ const ProductSchema = new Schema<IProductDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /* Indexes */
@@ -174,7 +172,7 @@ ProductSchema.index({ salesCount: -1 });
 ProductSchema.index({ createdAt: -1 });
 ProductSchema.index(
   { name: "text", description: "text", tags: "text" },
-  { weights: { name: 10, tags: 5, description: 1 } }
+  { weights: { name: 10, tags: 5, description: 1 } },
 );
 
 export default mongoose.models.Product ||

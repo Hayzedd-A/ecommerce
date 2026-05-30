@@ -1,21 +1,33 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import User from "@/lib/db/models/User";
+import { AuthService } from "@/lib/services/auth.service";
+import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
 
 export async function GET(req: NextRequest) {
   try {
     await dbConnect();
 
-    // Extract headers populated by proxy.ts
-    const userId = req.headers.get("x-user-id");
-    if (!userId) {
+    // Validate access token directly from cookie.
+    const accessToken = req.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
+    if (!accessToken) {
       return NextResponse.json(
-        { success: false, message: "Unauthorized — User details missing" },
+        { success: false, message: "Unauthorized — Access token missing" },
         { status: 401 }
       );
     }
 
-    const user = await User.findById(userId);
+    let payload;
+    try {
+      payload = AuthService.verifyAccessToken(accessToken);
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized — Invalid access token" },
+        { status: 401 }
+      );
+    }
+
+    const user = await User.findById(payload.id);
     if (!user || !user.isActive) {
       return NextResponse.json(
         { success: false, message: "User not found or suspended" },
@@ -36,10 +48,11 @@ export async function GET(req: NextRequest) {
         isEmailVerified: user.isEmailVerified,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Get current user error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
-      { success: false, message: "Internal server error", error: error.message },
+      { success: false, message: "Internal server error", error: message },
       { status: 500 }
     );
   }

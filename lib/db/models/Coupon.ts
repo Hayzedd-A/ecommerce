@@ -8,6 +8,7 @@ export interface ICouponDocument extends Document {
   maxUses?: number;
   usedCount: number;
   expiresAt?: Date;
+  startsAt?: Date;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
@@ -32,8 +33,8 @@ const CouponSchema = new Schema<ICouponDocument>(
       required: [true, "Coupon value is required"],
       min: [0, "Value cannot be negative"],
       validate: {
-        validator: function (this: ICouponDocument, val: number) {
-          if (this.type === "percentage") return val <= 100;
+        validator: function (val: number) {
+          if ((this as any).type === "percentage") return val <= 100;
           return true;
         },
         message: "Percentage discount cannot exceed 100%",
@@ -52,6 +53,7 @@ const CouponSchema = new Schema<ICouponDocument>(
       default: 0,
     },
     expiresAt: Date,
+    startsAt: Date,
     isActive: {
       type: Boolean,
       default: true,
@@ -59,7 +61,7 @@ const CouponSchema = new Schema<ICouponDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /* Indexes */

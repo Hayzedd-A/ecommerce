@@ -1,13 +1,12 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
+import getStoreSettings from "@/lib/settings.server";
 
-import StoreProvider from "@/components/providers/StoreProvider";
-import QueryProvider from "@/components/providers/QueryProvider";
-import ThemeProvider from "@/components/providers/ThemeProvider";
+// Providers are composed via the `Providers` component imported below
 
 import "./globals.css";
-import Script from "next/script";
+// Script import removed; theme initialization handled in ThemeProvider
 import { Providers } from "@/components/providers";
 
 const inter = Inter({
@@ -35,11 +34,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const initialSettings = await getStoreSettings();
   return (
     <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <head>
@@ -63,7 +63,7 @@ export default function RootLayout({
           `} 
         </Script>
           */}
-        <Providers>
+        <Providers initialSettings={initialSettings}>
           {children}
           <Toaster
             position="top-right"

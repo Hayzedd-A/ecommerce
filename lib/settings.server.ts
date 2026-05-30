@@ -1,0 +1,17 @@
+/* Server-only helper to load store settings directly from the database.
+   Use this from server components to avoid forcing client components to fetch. */
+
+import dbConnect from "@/lib/db/connect";
+import StoreSettings from "@/lib/db/models/StoreSettings";
+import type { IStoreSettings } from "@/lib/types";
+
+export async function getStoreSettings(): Promise<IStoreSettings> {
+  await dbConnect();
+  const settingsDoc = await StoreSettings.getSettings();
+
+  // Serialize mongoose document to plain JS object suitable for sending to client
+  const plain = JSON.parse(JSON.stringify(settingsDoc));
+  return plain as IStoreSettings;
+}
+
+export default getStoreSettings;
