@@ -1,10 +1,17 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
-import { ShoppingBag, CreditCard, Shield, Truck, Sparkles } from "lucide-react";
+import {
+  ShoppingBag,
+  CreditCard,
+  Shield,
+  Truck,
+  MapPin,
+  Package,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { CheckoutSchema, CheckoutInput } from "@/lib/validators/order.schema";
@@ -16,18 +23,6 @@ import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import apiClient from "@/lib/api/client";
 
-// Delivery zones mapping
-const DELIVERY_ZONES = [
-  { name: "Lagos Main / Island", fee: 2500, days: "1-2 Days" },
-  { name: "South West (Oyo, Ogun, Osun, etc.)", fee: 4000, days: "2-3 Days" },
-  {
-    name: "South South / East (Rivers, Enugu, etc.)",
-    fee: 5500,
-    days: "3-5 Days",
-  },
-  { name: "Abuja / North", fee: 6500, days: "4-6 Days" },
-];
-
 export default function CheckoutPage() {
   const router = useRouter();
   const dispatch = useAppDispatch();
@@ -35,7 +30,18 @@ export default function CheckoutPage() {
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
-  const [deliveryZone, setDeliveryZone] = useState(DELIVERY_ZONES[0]);
+  const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
+    "delivery",
+  );
+  const [deliveryLocations, setDeliveryLocations] = useState<any[]>([]);
+  const [selectedDeliveryLocationId, setSelectedDeliveryLocationId] =
+    useState<string>("");
+
+  // Cascading filter state
+  const [selectedCountry, setSelectedCountry] = useState<string>("");
+  const [selectedState, setSelectedState] = useState<string>("");
+  const [selectedCity, setSelectedCity] = useState<string>("");
+
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false);
@@ -43,10 +49,7 @@ export default function CheckoutPage() {
   const [couponResponse, setCouponResponse] = useState<{
     message: string;
     status: "success" | "error";
-  }>({
-    message: "",
-    status: "success",
-  });
+  }>({ message: "", status: "success" });
 
   const {
     register,
@@ -67,18 +70,129 @@ export default function CheckoutPage() {
         zipCode: "",
       },
       items: [],
+      deliveryLocationId: "",
+      deliveryMethod: "delivery",
     },
   });
 
-  // Hydrate items in form and update guest flags when store changes
   useEffect(() => {
     setValue("items", items);
     setValue("isGuest", !isAuthenticated);
+    setValue("subtotal", subtotal);
+    setValue("total", subtotal);
+    setValue("deliveryMethod", deliveryMethod);
     if (user) {
       setValue("shippingAddress.fullName", user.name);
       setValue("shippingAddress.phone", user.phone || "");
     }
   }, [items, isAuthenticated, user, setValue]);
+
+  useEffect(() => {
+    const loadLocations = async () => {
+      try {
+        const response = await apiClient.get("/delivery-locations");
+        const locations = response.data.data || [];
+        setDeliveryLocations(locations);
+      } catch (error: any) {
+        console.error("Failed to load delivery locations:", error);
+        toast.error("Unable to load delivery locations");
+      }
+    };
+    loadLocations();
+  }, []);
+
+  // --- Cascading dropdown derived data ---
+  const filteredByMethod = useMemo(
+    () => deliveryLocations.filter((loc) => loc.type === deliveryMethod),
+    [deliveryLocations, deliveryMethod],
+  );
+
+  // Reset cascade when delivery method changes
+  useEffect(() => {
+    setSelectedCountry(filteredByMethod[0]?.country ?? "");
+    setSelectedState("");
+    setSelectedCity("");
+    setSelectedDeliveryLocationId("");
+  }, [deliveryMethod, filteredByMethod]);
+
+  const countries = useMemo(
+    () =>
+      [
+        ...new Set(filteredByMethod.map((loc) => loc.country).filter(Boolean)),
+      ].sort(),
+    [filteredByMethod],
+  );
+
+  const states = useMemo(() => {
+    if (!selectedCountry) return [];
+    return [
+      ...new Set(
+        filteredByMethod
+          .filter((loc) => loc.country === selectedCountry)
+          .map((loc) => loc.state)
+          .filter(Boolean),
+      ),
+    ].sort();
+  }, [filteredByMethod, selectedCountry]);
+
+  const cities = useMemo(() => {
+    if (!selectedCountry || !selectedState) return [];
+    return [
+      ...new Set(
+        filteredByMethod
+          .filter(
+            (loc) =>
+              loc.country === selectedCountry && loc.state === selectedState,
+          )
+          .map((loc) => loc.city)
+          .filter(Boolean),
+      ),
+    ].sort();
+  }, [filteredByMethod, selectedCountry, selectedState]);
+
+  const locationsForCity = useMemo(() => {
+    if (!selectedCountry || !selectedState || !selectedCity) return [];
+    return filteredByMethod.filter(
+      (loc) =>
+        loc.country === selectedCountry &&
+        loc.state === selectedState &&
+        loc.city === selectedCity,
+    );
+  }, [filteredByMethod, selectedCountry, selectedState, selectedCity]);
+
+  // Auto-select state if only one available
+  useEffect(() => {
+    if (states.length === 1) {
+      setSelectedState(states[0]);
+      setValue("shippingAddress.state", states[0]);
+    } else {
+      setSelectedState("");
+    }
+  }, [states]);
+
+  // Auto-select city if only one available
+  useEffect(() => {
+    if (cities.length === 1) {
+      setSelectedCity(cities[0]);
+      setValue("shippingAddress.city", cities[0]);
+    } else {
+      setSelectedCity("");
+    }
+  }, [cities]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      const location = locationsForCity.find(
+        (loc) => loc.city === selectedCity,
+      );
+      if (location) {
+        setSelectedDeliveryLocationId(location._id);
+        setValue("deliveryLocationId", location._id);
+      }
+    } else {
+      setSelectedDeliveryLocationId("");
+    }
+  }, [selectedCity]);
 
   if (items.length === 0) {
     return (
@@ -104,27 +218,29 @@ export default function CheckoutPage() {
   }
 
   const clearCoupon = (code?: string) => {
-    if (code) {
-      setCouponCode(code);
-    }
+    if (code) setCouponCode(code);
     setCouponDiscount(0);
-    setCouponResponse({
-      message: "",
-      status: "success",
-    });
+    setCouponResponse({ message: "", status: "success" });
   };
+
+  const selectedDeliveryLocation =
+    locationsForCity.find((loc) => loc._id === selectedDeliveryLocationId) ||
+    locationsForCity[0] ||
+    null;
+  const selectedDeliveryFee = selectedDeliveryLocation?.price ?? 0;
+  const selectedDeliveryLabel = selectedDeliveryLocation
+    ? `${selectedDeliveryLocation.name} — ${selectedDeliveryLocation.city}, ${selectedDeliveryLocation.state}`
+    : "No location selected";
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
     setIsVerifyingCoupon(true);
     clearCoupon(couponCode);
     try {
-      // Call server-side coupon validation
       const res = await apiClient.post("/coupons/validate", {
         code: couponCode,
         subtotal,
       });
-
       if (res.data?.success && res.data.data) {
         setCouponResponse({
           message: res.data?.message || "Coupon applied successfully",
@@ -132,15 +248,12 @@ export default function CheckoutPage() {
         });
         const { discount, code } = res.data.data;
         setCouponDiscount(Number(discount) || 0);
-        // normalize stored code to server canonical code
         setCouponCode((code || couponCode).toString().toUpperCase());
         toast.success(`Coupon ${code || couponCode} applied.`);
       } else {
-        console.log("Coupon validation error:", res.data?.message);
         toast.error(res.data?.message || "Failed to apply coupon");
       }
     } catch (err: any) {
-      console.log("Coupon validation error:", err.response?.data || err);
       setCouponResponse({
         message: err.response?.data?.message || "Failed to apply coupon",
         status: "error",
@@ -155,10 +268,12 @@ export default function CheckoutPage() {
     try {
       const payload = {
         ...data,
-        deliveryFee: deliveryZone.fee,
+        deliveryMethod,
+        deliveryLocationId: selectedDeliveryLocation?._id,
+        deliveryFee: selectedDeliveryFee,
         discount: couponDiscount,
         couponUsed: couponDiscount > 0 ? couponCode.toUpperCase() : undefined,
-        total: subtotal + deliveryZone.fee - couponDiscount,
+        total: subtotal + selectedDeliveryFee - couponDiscount,
         subtotal,
       };
 
@@ -167,12 +282,9 @@ export default function CheckoutPage() {
 
       if (resData.success) {
         toast.success("Order created! Redirecting to checkout portal...");
-
-        // If Monnify returned a dynamic checkout URL, send them there
         if (resData.checkoutUrl) {
           router.push(resData.checkoutUrl);
         } else {
-          // Fallback to local success screen (mock payment mode)
           dispatch(clearCart());
           router.push(`/checkout/success?ref=${resData.paymentReference}`);
         }
@@ -180,7 +292,6 @@ export default function CheckoutPage() {
         toast.error(resData.message || "Checkout failed to initialize");
       }
     } catch (error: any) {
-      console.error("Order error:", error);
       toast.error(
         error.response?.data?.message ||
           "Something went wrong during checkout.",
@@ -190,7 +301,14 @@ export default function CheckoutPage() {
     }
   };
 
-  const totalAmount = subtotal + deliveryZone.fee - couponDiscount;
+  const totalAmount = subtotal + selectedDeliveryFee - couponDiscount;
+  setValue("total", totalAmount);
+
+  // ─── Select field shared style ───────────────────────────────────────────────
+  const selectClass =
+    "w-full bg-surface text-foreground text-sm px-3.5 py-2.5 rounded-xl border border-border " +
+    "focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500/20 " +
+    "disabled:opacity-40 disabled:cursor-not-allowed transition appearance-none cursor-pointer";
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
@@ -199,7 +317,7 @@ export default function CheckoutPage() {
       </h1>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* LHS - Checkout Address form */}
+        {/* ── LHS ─────────────────────────────────────────────────────────────── */}
         <div className="lg:col-span-7 space-y-6">
           <Card className="p-6 md:p-8" glass>
             <form
@@ -209,16 +327,16 @@ export default function CheckoutPage() {
               })}
               className="space-y-6"
             >
+              {/* Section 1 – Shipping */}
               <div className="space-y-1">
                 <h2 className="text-lg font-bold text-foreground">
-                  1. Shipping & Contact Info
+                  1. Contact Info
                 </h2>
                 <p className="text-xs text-muted-foreground">
                   Specify the delivery address for your items
                 </p>
               </div>
 
-              {/* Guest Fields if not authenticated */}
               {!isAuthenticated && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-4 rounded-xl border border-border bg-surface-secondary">
                   <Input
@@ -238,7 +356,6 @@ export default function CheckoutPage() {
                 </div>
               )}
 
-              {/* Address details */}
               <div className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
@@ -256,16 +373,7 @@ export default function CheckoutPage() {
                     {...register("shippingAddress.phone")}
                   />
                 </div>
-
-                <Input
-                  label="Street Address"
-                  type="text"
-                  placeholder="No. 12 Commerce Street, Lekki Phase 1"
-                  error={errors.shippingAddress?.street?.message}
-                  {...register("shippingAddress.street")}
-                />
-
-                <div className="grid grid-cols-2 gap-4">
+                {/* <div className="grid grid-cols-2 gap-4">
                   <Input
                     label="City"
                     type="text"
@@ -280,48 +388,294 @@ export default function CheckoutPage() {
                     error={errors.shippingAddress?.state?.message}
                     {...register("shippingAddress.state")}
                   />
-                </div>
+                </div> */}
               </div>
 
-              {/* Shipping Method Zone Selection */}
-              <div className="space-y-4 pt-6 border-t border-border/80">
+              {/* ── Section 2 – Delivery Option ─────────────────────────────── */}
+              <div className="space-y-5 pt-6 border-t border-border/80">
                 <div className="space-y-1">
                   <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                    2. Select Shipping Method
+                    2. Select Delivery Option
                   </h3>
                   <p className="text-xs text-muted-foreground">
-                    Select your region for delivery pricing
+                    Choose how you want to receive your order.
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {DELIVERY_ZONES.map((zone) => (
-                    <button
-                      key={zone.name}
-                      type="button"
-                      onClick={() => setDeliveryZone(zone)}
-                      className={`flex flex-col text-left p-4 rounded-xl border transition-all cursor-pointer ${
-                        deliveryZone.name === zone.name
-                          ? "border-primary-500 bg-primary-50/10 ring-2 ring-primary-100"
-                          : "border-border bg-surface hover:bg-surface-secondary"
+                {/* ── Delivery / Pickup Switch ────────────────────────────── */}
+                <div className="flex items-center gap-4">
+                  {/* Label: Delivery */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setValue("deliveryMethod", "delivery");
+                      setDeliveryMethod("delivery");
+                    }}
+                    className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
+                      deliveryMethod === "delivery"
+                        ? "text-primary-600"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <Truck className="h-4 w-4" />
+                    Delivery
+                  </button>
+
+                  {/* The switch track */}
+                  <button
+                    type="button"
+                    role="switch"
+                    aria-checked={deliveryMethod === "pickup"}
+                    onClick={() => {
+                      setDeliveryMethod((prev) => {
+                        const selected =
+                          prev === "delivery" ? "pickup" : "delivery";
+                        setValue("deliveryMethod", selected);
+                        return selected;
+                      });
+                    }}
+                    className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                      deliveryMethod === "pickup"
+                        ? "bg-primary-500"
+                        : "bg-primary-500"
+                    }`}
+                    style={{
+                      background:
+                        deliveryMethod === "pickup"
+                          ? "var(--color-primary-500, #6366f1)"
+                          : "var(--color-primary-500, #6366f1)",
+                    }}
+                  >
+                    {/* Thumb */}
+                    <span
+                      className={`pointer-events-none inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out ${
+                        deliveryMethod === "pickup"
+                          ? "translate-x-7"
+                          : "translate-x-0"
                       }`}
                     >
-                      <span className="text-xs font-bold text-foreground">
-                        {zone.name}
+                      {deliveryMethod === "pickup" ? (
+                        <Package className="h-3 w-3 text-primary-500" />
+                      ) : (
+                        <Truck className="h-3 w-3 text-primary-500" />
+                      )}
+                    </span>
+                  </button>
+
+                  {/* Label: Pickup */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryMethod("pickup");
+                      setValue("deliveryMethod", "pickup");
+                    }}
+                    className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
+                      deliveryMethod === "pickup"
+                        ? "text-primary-600"
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    <Package className="h-4 w-4" />
+                    Pickup
+                  </button>
+                </div>
+
+                {/* Active method pill / description */}
+                <div
+                  className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium border transition-all ${
+                    deliveryMethod === "delivery"
+                      ? "bg-primary-50/60 border-primary-300 text-primary-700"
+                      : "bg-amber-50/60 border-amber-300 text-amber-700"
+                  }`}
+                >
+                  {deliveryMethod === "delivery" ? (
+                    <>
+                      <Truck className="h-4 w-4 flex-shrink-0" />
+                      <span>Your order will be delivered to your address.</span>
+                    </>
+                  ) : (
+                    <>
+                      <Package className="h-4 w-4 flex-shrink-0" />
+                      <span>
+                        You'll pick up your order from a store near you.
                       </span>
-                      <span className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1">
-                        <Truck className="h-3 w-3" />
-                        {zone.days}
+                    </>
+                  )}
+                </div>
+
+                {/* ── Cascading Dropdowns ─────────────────────────────────── */}
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {deliveryMethod === "delivery"
+                      ? "Delivery Location"
+                      : "Pickup Location"}
+                  </div>
+
+                  {/* Country */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Country
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedCountry}
+                        onChange={(e) => {
+                          setSelectedCountry(e.target.value);
+                          setSelectedState("");
+                          setSelectedCity("");
+                          setSelectedDeliveryLocationId("");
+                        }}
+                        className={selectClass}
+                        disabled={countries.length === 0}
+                      >
+                        <option value=""> --Select Country -- </option>
+                        {/* <option value={countries[0]}>{countries[0]}</option> */}
+                        {countries.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        ▾
                       </span>
-                      <span className="text-sm font-black text-primary-500 mt-2">
-                        {formatCurrency(zone.fee)}
+                    </div>
+                  </div>
+
+                  {/* State */}
+                  <div className="space-y-1">
+                    <label
+                      className={`text-xs font-medium transition-colors ${
+                        selectedCountry
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/40"
+                      }`}
+                    >
+                      State / Region
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedState}
+                        onChange={(e) => {
+                          setSelectedState(e.target.value);
+                          setSelectedCity("");
+                          setSelectedDeliveryLocationId("");
+                          setValue("shippingAddress.state", e.target.value);
+                        }}
+                        className={selectClass}
+                        disabled={!selectedCountry || states.length === 0}
+                      >
+                        <option value="">— Select state —</option>
+                        {states.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        ▾
                       </span>
-                    </button>
-                  ))}
+                    </div>
+                  </div>
+
+                  {/* City */}
+                  <div className="space-y-1">
+                    <label
+                      className={`text-xs font-medium transition-colors ${
+                        selectedState
+                          ? "text-muted-foreground"
+                          : "text-muted-foreground/40"
+                      }`}
+                    >
+                      City
+                    </label>
+                    <div className="relative">
+                      <select
+                        value={selectedCity}
+                        onChange={(e) => {
+                          setSelectedCity(e.target.value);
+                          setSelectedDeliveryLocationId("");
+                          setValue("shippingAddress.city", e.target.value);
+                        }}
+                        className={selectClass}
+                        disabled={!selectedState || cities.length === 0}
+                      >
+                        <option value="">— Select city —</option>
+                        {cities.map((c) => (
+                          <option key={c} value={c}>
+                            {c}
+                          </option>
+                        ))}
+                      </select>
+                      <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                        ▾
+                      </span>
+                    </div>
+                  </div>
+                  {deliveryMethod === "delivery" && (
+                    <Input
+                      label="Street Address"
+                      type="text"
+                      placeholder="No. 12 Commerce Street, Lekki Phase 1"
+                      error={errors.shippingAddress?.street?.message}
+                      {...register("shippingAddress.street")}
+                    />
+                  )}
+
+                  {/* Location cards within the chosen city */}
+                  {selectedCity && (
+                    <div className="space-y-2 pt-1">
+                      {locationsForCity.length === 0 ? (
+                        <div className="rounded-xl border border-border bg-surface-secondary p-4 text-sm text-muted-foreground">
+                          No {deliveryMethod} locations available for{" "}
+                          <strong>{selectedCity}</strong>.
+                        </div>
+                      ) : (
+                        locationsForCity.map((location) => (
+                          <button
+                            key={location._id}
+                            type="button"
+                            onClick={() =>
+                              setSelectedDeliveryLocationId(location._id)
+                            }
+                            className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${
+                              selectedDeliveryLocationId === location._id
+                                ? "border-primary-500 bg-primary-50/10 ring-1 ring-primary-400"
+                                : "border-border bg-surface hover:bg-surface-secondary"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {location.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {location.city}, {location.state},{" "}
+                                  {location.country}
+                                </div>
+                              </div>
+                              <span className="text-sm font-black text-primary-500 whitespace-nowrap">
+                                {formatCurrency(location.price)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                              <span>
+                                {location.estimatedDays || "No estimate"}
+                              </span>
+                              {location.address && (
+                                <span>· {location.address}</span>
+                              )}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Payment disclaimer & submit button */}
+              {/* Payment & Submit */}
               <div className="pt-6 border-t border-border/80 space-y-4">
                 <Button
                   type="submit"
@@ -344,7 +698,7 @@ export default function CheckoutPage() {
           </Card>
         </div>
 
-        {/* RHS - Order Summary Panel */}
+        {/* ── RHS – Order Summary ──────────────────────────────────────────────── */}
         <div className="lg:col-span-5 space-y-6">
           <Card className="p-6" glass>
             <h2 className="text-lg font-bold text-foreground border-b border-border pb-4 mb-4 flex items-center gap-2">
@@ -352,7 +706,6 @@ export default function CheckoutPage() {
               Order Summary
             </h2>
 
-            {/* Items list */}
             <div className="divide-y divide-border/60 max-h-80 overflow-y-auto pr-1">
               {items.map((item) => (
                 <div
@@ -393,7 +746,7 @@ export default function CheckoutPage() {
               ))}
             </div>
 
-            {/* Promo Codes */}
+            {/* Coupon */}
             <div className="pt-4 border-t border-border mt-4">
               <label className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground block mb-1.5">
                 Have a Coupon Code?
@@ -416,28 +769,33 @@ export default function CheckoutPage() {
                 </Button>
               </div>
               <span
-                className={`text-[10px] ${couponResponse.status === "error" ? "text-red-500" : "text-green-500"} mt-1.5 block`}
+                className={`text-[10px] ${
+                  couponResponse.status === "error"
+                    ? "text-red-500"
+                    : "text-green-500"
+                } mt-1.5 block`}
               >
                 {couponResponse.message}
               </span>
             </div>
 
-            {/* Calculations breakdown */}
+            {/* Totals */}
             <div className="pt-6 border-t border-border mt-6 space-y-3 text-sm">
               <div className="flex justify-between text-muted-foreground">
                 <span>Subtotal</span>
                 <span>{formatCurrency(subtotal)}</span>
               </div>
               <div className="flex justify-between text-muted-foreground">
-                <span>Delivery Fee ({deliveryZone.name})</span>
-                <span>{formatCurrency(deliveryZone.fee)}</span>
+                <span>Delivery Fee </span>
+                <span>
+                  {selectedDeliveryFee === 0
+                    ? "Free"
+                    : formatCurrency(selectedDeliveryFee)}
+                </span>
               </div>
               {couponDiscount > 0 && (
                 <div className="flex justify-between text-success-500 font-medium">
-                  <span className="flex items-center gap-1">
-                    {/* <Sparkles className="h-4 w-4" /> */}
-                    Coupon Discount
-                  </span>
+                  <span>Coupon Discount</span>
                   <span>-{formatCurrency(couponDiscount)}</span>
                 </div>
               )}

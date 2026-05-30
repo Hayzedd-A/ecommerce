@@ -2,7 +2,9 @@ import { z } from "zod";
 
 export const AddressSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  phone: z.string().regex(/^[0-9+]{11,14}$/, "Please provide a valid phone number"),
+  phone: z
+    .string()
+    .regex(/^[0-9+]{11,14}$/, "Please provide a valid phone number"),
   street: z.string().min(5, "Street address must be at least 5 characters"),
   city: z.string().min(2, "City is required"),
   state: z.string().min(2, "State is required"),
@@ -27,11 +29,22 @@ export const OrderItemSchema = z.object({
 export const CheckoutSchema = z
   .object({
     shippingAddress: AddressSchema,
-    items: z.array(OrderItemSchema).min(1, "Your cart must contain at least one item"),
+    items: z
+      .array(OrderItemSchema)
+      .min(1, "Your cart must contain at least one item"),
     notes: z.string().max(500).optional().or(z.literal("")),
     couponUsed: z.string().optional().or(z.literal("")),
     isGuest: z.boolean().optional(),
-    guestEmail: z.string().email("Invalid email address").optional().or(z.literal("")),
+    deliveryMethod: z.enum(["delivery", "pickup"]),
+    deliveryLocationId: z.string().optional().or(z.literal("")),
+    discount: z.number().optional(),
+    total: z.number(),
+    subtotal: z.number(),
+    guestEmail: z
+      .string()
+      .email("Invalid email address")
+      .optional()
+      .or(z.literal("")),
     guestPhone: z
       .string()
       .regex(/^[0-9+]{11,14}$/, "Please provide a valid phone number")
@@ -48,7 +61,7 @@ export const CheckoutSchema = z
     {
       message: "Guest email and phone number are required for guest checkout",
       path: ["guestEmail"],
-    }
+    },
   );
 
 export type AddressInput = z.infer<typeof AddressSchema>;

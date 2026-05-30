@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import Coupon from "@/lib/db/models/Coupon";
 import Order from "@/lib/db/models/Order";
 import { DEFAULT_PAGE_SIZE } from "@/lib/utils/constants";
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
-    try { await requireAdmin(req); } catch (e: any) { return NextResponse.json({ success: false, message: e.message }, { status: e.message === 'UNAUTHENTICATED' ? 401 : 403 }); }
+    const guard = await adminGuard(req);
+    if (guard) return guard;
     const { id } = await params;
     const coupon = await Coupon.findById(id).lean();
     if (!coupon) return NextResponse.json({ success: false, message: "Coupon not found" }, { status: 404 });

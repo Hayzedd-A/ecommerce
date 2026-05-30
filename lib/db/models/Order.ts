@@ -111,6 +111,16 @@ const OrderSchema = new Schema<IOrderDocument>(
     },
     subtotal: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
+    deliveryMethod: {
+      type: String,
+      enum: ["delivery", "pickup"],
+      default: "delivery",
+    },
+    deliveryLocationId: {
+      type: Schema.Types.ObjectId,
+      ref: "DeliveryLocation",
+    },
+    deliveryLocationLabel: String,
     discount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
     couponUsed: String,

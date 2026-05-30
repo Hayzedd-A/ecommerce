@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import StoreSettings from "@/lib/db/models/StoreSettings";
+
 export async function PUT(req: NextRequest) {
   try {
     await dbConnect();
-    try { await requireAdmin(req); } catch (e: any) { return NextResponse.json({ success: false, message: e.message }, { status: e.message === 'UNAUTHENTICATED' ? 401 : 403 }); }
+    const guard = await adminGuard(req);
+    if (guard) return guard;
     const body = await req.json();
     const settings = await StoreSettings.getSettings();
     // Merge allowed fields only

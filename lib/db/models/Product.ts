@@ -20,6 +20,7 @@ export interface IProductDocument extends Document {
   isFeatured: boolean;
   isSponsored: boolean;
   stock: number;
+  trackStock: boolean;
   lowStockThreshold: number;
   status: "active" | "draft" | "archived";
   seoMeta?: {
@@ -138,6 +139,10 @@ const ProductSchema = new Schema<IProductDocument>(
       type: Number,
       default: 5,
       min: 0,
+    },
+    trackStock: {
+      type: Boolean,
+      default: true,
     },
     status: {
       type: String,

@@ -4,13 +4,18 @@ import dbConnect from "@/lib/db/connect";
 import Order from "@/lib/db/models/Order";
 import Product from "@/lib/db/models/Product";
 import Payment from "@/lib/db/models/Payment";
+import DeliveryLocation from "@/lib/db/models/DeliveryLocation";
 import { CheckoutSchema } from "@/lib/validators/order.schema";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { generateOrderNumber } from "@/lib/utils/helpers";
 import { AuthService } from "@/lib/services/auth.service";
 import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
+import { Coupon } from "@/lib/db/models";
+import mongoose from "mongoose";
 
 export async function POST(req: NextRequest) {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     await dbConnect();
     const body = await req.json();
@@ -73,7 +78,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Check stock
-      if (dbProduct.stock < item.quantity) {
+      if (dbProduct.trackStock && dbProduct.stock < item.quantity) {
         return NextResponse.json(
           {
             success: false,
@@ -97,12 +102,65 @@ export async function POST(req: NextRequest) {
 
     // Apply coupon discount on server
     let discount = 0;
-    if (couponUsed && couponUsed.toUpperCase() === "SAVE10") {
-      discount = Math.round(subtotal * 0.1);
+    if (couponUsed) {
+      console.log("coupon used: ", couponUsed);
+      const dbCoupon = await Coupon.findOne({ code: couponUsed });
+      console.log("coupon: ", dbCoupon);
+      if (dbCoupon) {
+        if (dbCoupon.usedCount >= dbCoupon.maxUses) {
+          return NextResponse.json(
+            { success: false, message: "Coupon has reached its maximum uses" },
+            { status: 400 },
+          );
+        }
+        const isExpired = dbCoupon.expiresAt < new Date();
+        const isStarted = dbCoupon.startsAt < new Date();
+        console.log("isExpired: ", isExpired);
+        console.log("isStarted: ", isStarted);
+        if (!isExpired && isStarted && dbCoupon.isActive) {
+          if (dbCoupon.type === "percentage") {
+            discount = Math.round(subtotal * (dbCoupon.value / 100));
+          } else if (dbCoupon.type === "fixed") {
+            discount = dbCoupon.value;
+          }
+          await Coupon.updateOne(
+            { _id: dbCoupon._id },
+            { $inc: { usedCount: 1 } },
+            { session },
+          );
+        }
+      }
     }
 
-    // Determine delivery fee based on body parameter
-    const deliveryFee = body.deliveryFee || 0;
+    // Validate selected delivery location and determine delivery fee
+    let deliveryLocation = null;
+    let deliveryFee = 0;
+    if (result.data.deliveryLocationId) {
+      deliveryLocation = await DeliveryLocation.findById(
+        result.data.deliveryLocationId,
+      );
+      if (!deliveryLocation || !deliveryLocation.isActive) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Selected delivery location is not available",
+          },
+          { status: 400 },
+        );
+      }
+      if (deliveryLocation.type !== result.data.deliveryMethod) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Selected delivery location does not match the chosen delivery method",
+          },
+          { status: 400 },
+        );
+      }
+      deliveryFee = deliveryLocation.price;
+    }
+
     const total = subtotal + deliveryFee - discount;
 
     // Create unique order number & payment reference
@@ -110,7 +168,7 @@ export async function POST(req: NextRequest) {
     const paymentReference = `PAY-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 
     // Create Order in DB (status: pending_payment)
-    const order = await Order.create({
+    const order = new Order({
       userId: userId || undefined,
       orderNumber,
       items: verifiedItems,
@@ -118,6 +176,11 @@ export async function POST(req: NextRequest) {
       status: "pending_payment",
       subtotal,
       deliveryFee,
+      deliveryMethod: result.data.deliveryMethod,
+      deliveryLocationId: deliveryLocation?._id,
+      deliveryLocationLabel: deliveryLocation
+        ? `${deliveryLocation.name} (${deliveryLocation.city}, ${deliveryLocation.state})`
+        : undefined,
       discount,
       total,
       couponUsed: couponUsed || undefined,
@@ -126,9 +189,7 @@ export async function POST(req: NextRequest) {
       guestPhone: isGuest ? guestPhone : undefined,
       notes,
     });
-
-    // Create Payment Record (status: initialized)
-    const payment = await Payment.create({
+    const payment = new Payment({
       orderId: order._id,
       userId: userId || undefined,
       reference: paymentReference,
@@ -136,16 +197,21 @@ export async function POST(req: NextRequest) {
       status: "initialized",
       provider: "monnify",
     });
+    order.paymentId = payment._id;
+    await order.save({ session });
+    await payment.save({ session });
 
     // Link payment inside order
-    order.paymentId = payment._id;
-    await order.save();
 
     // Decrement inventory stock
     for (const item of items) {
-      await Product.findByIdAndUpdate(item.productId, {
-        $inc: { stock: -item.quantity, salesCount: item.quantity },
-      });
+      await Product.findByIdAndUpdate(
+        item.productId,
+        {
+          $inc: { stock: -item.quantity, salesCount: item.quantity },
+        },
+        { session },
+      );
     }
 
     // Attempt Monnify Initialization
@@ -172,7 +238,7 @@ export async function POST(req: NextRequest) {
           callbackUrl: `${appUrl}/api/payments/callback`,
           description: `Order ${orderNumber} payment`,
         });
-
+      console.log("paymentResult: ", paymentResult);
       if (paymentResult.success && paymentResult.checkoutUrl) {
         checkoutUrl = paymentResult.checkoutUrl;
         checkoutSuccess = true;
@@ -180,12 +246,13 @@ export async function POST(req: NextRequest) {
         // Update payment gateway response
         payment.status = "pending";
         payment.metadata = paymentResult.gatewayResponse;
-        await payment.save();
+        await payment.save({ session });
       }
     }
 
     // Return Checkout configurations
     if (checkoutSuccess) {
+      await session.commitTransaction();
       return NextResponse.json({
         success: true,
         message: "Payment initialized successfully",
@@ -195,25 +262,29 @@ export async function POST(req: NextRequest) {
     } else {
       // Graceful Development/Mock mode when credentials are not configured
       // Set payment status directly to "paid" & order status to "paid" for immediate validation
-      payment.status = "paid";
-      payment.paidAt = new Date();
-      await payment.save();
+      throw new Error("Payment initialization failed");
+      // payment.status = "paid";
+      // payment.paidAt = new Date();
+      // await payment.save({ session });
 
-      order.status = "paid";
-      await order.save();
+      // order.status = "paid";
+      // await order.save({ session });
 
-      return NextResponse.json({
-        success: true,
-        message: "Mock payment initialized successfully (Development Mode)",
-        paymentReference,
-      });
+      // return NextResponse.json({
+      //   success: true,
+      //   message: "Mock payment initialized successfully (Development Mode)",
+      //   paymentReference,
+      // });
     }
   } catch (error: unknown) {
+    await session.abortTransaction();
     console.error("Payment initialization error:", error);
     const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { success: false, message: "Internal server error", error: message },
       { status: 500 },
     );
+  } finally {
+    session.endSession();
   }
 }

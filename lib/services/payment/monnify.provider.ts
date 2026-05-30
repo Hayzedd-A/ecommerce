@@ -1,7 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import axios from "axios";
 import crypto from "crypto";
-import { PaymentProvider, PaymentInitResult, PaymentVerifyResult, WebhookVerifyResult } from "./types";
+import {
+  PaymentProvider,
+  PaymentInitResult,
+  PaymentVerifyResult,
+  WebhookVerifyResult,
+} from "./types";
 
 export class MonnifyProvider implements PaymentProvider {
   name = "monnify";
@@ -14,7 +19,8 @@ export class MonnifyProvider implements PaymentProvider {
     this.apiKey = process.env.MONNIFY_API_KEY || "";
     this.secretKey = process.env.MONNIFY_SECRET_KEY || "";
     this.contractCode = process.env.MONNIFY_CONTRACT_CODE || "";
-    this.baseUrl = process.env.MONNIFY_BASE_URL || "https://sandbox.monnify.com";
+    this.baseUrl =
+      process.env.MONNIFY_BASE_URL || "https://sandbox.monnify.com";
   }
 
   /**
@@ -22,10 +28,14 @@ export class MonnifyProvider implements PaymentProvider {
    */
   private async getAccessToken(): Promise<string> {
     if (!this.apiKey || !this.secretKey) {
-      throw new Error("Monnify API credentials are not configured in environment variables.");
+      throw new Error(
+        "Monnify API credentials are not configured in environment variables.",
+      );
     }
 
-    const authHeader = Buffer.from(`${this.apiKey}:${this.secretKey}`).toString("base64");
+    const authHeader = Buffer.from(`${this.apiKey}:${this.secretKey}`).toString(
+      "base64",
+    );
 
     try {
       const response = await axios.post(
@@ -35,15 +45,23 @@ export class MonnifyProvider implements PaymentProvider {
           headers: {
             Authorization: `Basic ${authHeader}`,
           },
-        }
+        },
       );
 
-      if (response.data?.requestSuccessful && response.data?.responseBody?.accessToken) {
+      if (
+        response.data?.requestSuccessful &&
+        response.data?.responseBody?.accessToken
+      ) {
         return response.data.responseBody.accessToken;
       }
-      throw new Error(response.data?.responseMessage || "Authentication failed");
+      throw new Error(
+        response.data?.responseMessage || "Authentication failed",
+      );
     } catch (error: any) {
-      console.error("Monnify auth error:", error?.response?.data || error.message);
+      console.error(
+        "Monnify auth error:",
+        error?.response?.data || error.message,
+      );
       throw new Error(`Monnify auth failed: ${error.message}`);
     }
   }
@@ -69,7 +87,13 @@ export class MonnifyProvider implements PaymentProvider {
         contractCode: this.contractCode,
         redirectUrl: params.callbackUrl,
         metadata: params.metadata || {},
-        paymentMethods: ["CARD", "ACCOUNT_TRANSFER"],
+        paymentMethods: [
+          "CARD",
+          "ACCOUNT_TRANSFER",
+          "USSD",
+          "DIRECT_DEBIT",
+          "PHONE_NUMBER",
+        ],
       };
 
       const response = await axios.post(
@@ -79,7 +103,7 @@ export class MonnifyProvider implements PaymentProvider {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const body = response.data;
@@ -98,7 +122,10 @@ export class MonnifyProvider implements PaymentProvider {
         message: body?.responseMessage || "Initialization failed",
       };
     } catch (error: any) {
-      console.error("Monnify init error:", error?.response?.data || error.message);
+      console.error(
+        "Monnify init error:",
+        error?.response?.data || error.message,
+      );
       return {
         success: false,
         paymentReference: params.paymentReference,
@@ -112,13 +139,13 @@ export class MonnifyProvider implements PaymentProvider {
       const token = await this.getAccessToken();
       const response = await axios.get(
         `${this.baseUrl}/api/v1/merchant/transactions/query?paymentReference=${encodeURIComponent(
-          reference
+          reference,
         )}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
           },
-        }
+        },
       );
 
       const body = response.data;
@@ -132,7 +159,10 @@ export class MonnifyProvider implements PaymentProvider {
           status = "failed";
         } else if (tr.paymentStatus === "EXPIRED") {
           status = "expired";
-        } else if (tr.paymentStatus === "OVERPAID" || tr.paymentStatus === "PARTIALLY_PAID") {
+        } else if (
+          tr.paymentStatus === "OVERPAID" ||
+          tr.paymentStatus === "PARTIALLY_PAID"
+        ) {
           status = "paid"; // Depending on business logic, partially paid might be treated separately, but we'll accept it
         }
 
@@ -153,7 +183,10 @@ export class MonnifyProvider implements PaymentProvider {
         message: body?.responseMessage || "Verification query failed",
       };
     } catch (error: any) {
-      console.error("Monnify verify error:", error?.response?.data || error.message);
+      console.error(
+        "Monnify verify error:",
+        error?.response?.data || error.message,
+      );
       return {
         success: false,
         status: "failed",
@@ -166,7 +199,7 @@ export class MonnifyProvider implements PaymentProvider {
 
   async verifyWebhook(
     headers: Record<string, any>,
-    rawBody: string
+    rawBody: string,
   ): Promise<WebhookVerifyResult> {
     try {
       const signature = headers["monnify-signature"];

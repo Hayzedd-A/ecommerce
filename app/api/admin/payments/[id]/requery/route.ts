@@ -1,13 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth/requireAdmin";
+import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import Payment from "@/lib/db/models/Payment";
 import Order from "@/lib/db/models/Order";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
+
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
-    try { await requireAdmin(req); } catch (e: any) { return NextResponse.json({ success: false, message: e.message }, { status: e.message === 'UNAUTHENTICATED' ? 401 : 403 }); }
+    const guard = await adminGuard(req);
+    if (guard) return guard;
     const id = req.nextUrl.pathname.split("/").slice(-3)[0];
     const payment = await Payment.findById(id);
     if (!payment) return NextResponse.json({ success: false, message: "Payment not found" }, { status: 404 });

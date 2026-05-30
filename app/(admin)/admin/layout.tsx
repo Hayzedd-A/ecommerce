@@ -17,7 +17,8 @@ import {
   X,
   Lock,
   ChevronRight,
-  Ticket
+  Ticket,
+  MapPin,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -35,6 +36,11 @@ const SIDEBAR_LINKS = [
   { label: "Orders", href: "/admin/orders", icon: ClipboardList },
   { label: "Customers", href: "/admin/customers", icon: Users },
   { label: "Coupons", href: "/admin/coupons", icon: Ticket },
+  {
+    label: "Delivery Locations",
+    href: "/admin/delivery-locations",
+    icon: MapPin,
+  },
   { label: "Settings", href: "/admin/settings", icon: Settings },
 ];
 
