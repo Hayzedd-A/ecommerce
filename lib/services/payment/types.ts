@@ -26,6 +26,7 @@ export interface WebhookVerifyResult {
 
 export interface PaymentProvider {
   name: string;
+  setConfig(config: any): void;
   initializePayment(params: {
     amount: number;
     customerEmail: string;

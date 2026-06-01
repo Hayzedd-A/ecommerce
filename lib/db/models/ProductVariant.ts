@@ -2,11 +2,11 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IProductVariantDocument extends Document {
   productId: mongoose.Types.ObjectId;
-  type: "color" | "size" | "material";
-  value: string;
-  label?: string;
+  attributes: Map<string, string>; // e.g. { "size": "45", "color": "red" }
+  attributeKey: string; // normalized string of attributes for unique constraint e.g. "color:red|size:45"
   price?: number;
   stock: number;
+  sku?: string;
   images: {
     url: string;
     publicId: string;
@@ -36,19 +36,15 @@ const ProductVariantSchema = new Schema<IProductVariantDocument>(
       required: true,
       index: true,
     },
-    type: {
-      type: String,
-      enum: ["color", "size", "material"],
-      required: [true, "Variant type is required"],
+    attributes: {
+      type: Map,
+      of: String,
+      required: [true, "Variant attributes are required"],
     },
-    value: {
+    attributeKey: {
       type: String,
-      required: [true, "Variant value is required"],
-      trim: true,
-    },
-    label: {
-      type: String,
-      trim: true,
+      required: true,
+      index: true,
     },
     price: {
       type: Number,
@@ -59,6 +55,10 @@ const ProductVariantSchema = new Schema<IProductVariantDocument>(
       required: true,
       default: 0,
       min: [0, "Stock cannot be negative"],
+    },
+    sku: {
+      type: String,
+      trim: true,
     },
     images: [VariantImageSchema],
     isActive: {
@@ -71,11 +71,24 @@ const ProductVariantSchema = new Schema<IProductVariantDocument>(
   }
 );
 
-/* Compound unique index: one variant per type+value per product */
+/* Compound unique index: productId + attributeKey */
 ProductVariantSchema.index(
-  { productId: 1, type: 1, value: 1 },
+  { productId: 1, attributeKey: 1 },
   { unique: true }
 );
+
+/**
+ * Pre-save hook to generate attributeKey
+ */
+ProductVariantSchema.pre("validate", async function () {
+  if (this.attributes) {
+    const sortedKeys = Array.from(this.attributes.keys()).sort();
+    console.log("Generating attributeKey for variant with attributes:", this.attributes);
+    this.attributeKey = sortedKeys
+      .map((key) => `${key}:${this.attributes.get(key)}`)
+      .join("|");
+  }
+});
 
 export default mongoose.models.ProductVariant ||
   mongoose.model<IProductVariantDocument>("ProductVariant", ProductVariantSchema);

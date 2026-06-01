@@ -64,7 +64,7 @@ export default function OrderSuccessPage() {
             <div>
               <span className="font-bold text-foreground">Secured Transaction</span>
               <p className="mt-0.5 leading-relaxed">
-                Your payment of this checkout session was processed safely using Monnify 256-bit encryption.
+                Your payment of this checkout session was processed safely using industry-standard 256-bit encryption.
               </p>
             </div>
           </div>

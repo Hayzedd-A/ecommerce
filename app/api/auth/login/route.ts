@@ -5,6 +5,7 @@ import Admin from "@/lib/db/models/Admin";
 import { LoginSchema } from "@/lib/validators/auth.schema";
 import { AuthService } from "@/lib/services/auth.service";
 import { COOKIE_REFRESH_TOKEN } from "@/lib/utils/constants";
+import { mergeGuestData } from "@/lib/auth/mergeGuest";
 
 export async function POST(req: NextRequest) {
   try {
@@ -59,6 +60,12 @@ export async function POST(req: NextRequest) {
         { lastLogin: new Date() },
         { upsert: true }
       );
+    }
+
+    // Merge guest data
+    const guestId = req.headers.get("x-guest-id");
+    if (guestId) {
+      await mergeGuestData(guestId, user._id.toString());
     }
 
     // Generate tokens

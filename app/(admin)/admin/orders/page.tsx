@@ -74,6 +74,7 @@ export default function AdminOrdersPage() {
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3">Payment Status</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Action</th>
               </tr>
@@ -94,6 +95,7 @@ export default function AdminOrdersPage() {
                     <td className="px-4 py-4 text-sm text-muted-foreground">{order.shippingAddress?.fullName || "Guest"}</td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">{formatDate(order.createdAt)}</td>
                     <td className="px-4 py-4 font-semibold text-foreground">{formatCurrency(order.total)}</td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">{order.payment?.status || "pending"}</td>
                     <td className="px-4 py-4 text-sm text-muted-foreground capitalize">{order.status.replace(/_/g, " ")}</td>
                     <td className="px-4 py-4 text-right">
                       <Link href={`/admin/orders/${order._id}`} className="text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline">

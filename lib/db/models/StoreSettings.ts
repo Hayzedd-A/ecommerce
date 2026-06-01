@@ -44,6 +44,19 @@ export interface IStoreSettingsDocument extends Document {
   pickupAddress?: string;
   currency: string;
   currencySymbol: string;
+  paymentSettings: {
+    activeProvider: "monnify" | "paystack";
+    monnify?: {
+      apiKey: string;
+      secretKey: string;
+      contractCode: string;
+      baseUrl: string;
+    };
+    paystack?: {
+      secretKey: string;
+      publicKey: string;
+    };
+  };
   updatedAt: Date;
 }
 
@@ -108,6 +121,26 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
     currencySymbol: {
       type: String,
       default: "₦",
+    },
+    paymentSettings: {
+      activeProvider: {
+        type: String,
+        enum: ["monnify", "paystack"],
+        default: "monnify",
+      },
+      monnify: {
+        apiKey: String,
+        secretKey: String,
+        contractCode: String,
+        baseUrl: {
+          type: String,
+          default: "https://sandbox.monnify.com",
+        },
+      },
+      paystack: {
+        secretKey: String,
+        publicKey: String,
+      },
     },
   },
   {

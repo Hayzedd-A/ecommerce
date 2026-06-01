@@ -1,0 +1,2 @@
+monnify success simulation not working.
+product sales, inventory and coupon update should increment on payment completion.

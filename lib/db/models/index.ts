@@ -13,6 +13,8 @@ import Coupon from "./Coupon";
 import Notification from "./Notification";
 import StoreSettings from "./StoreSettings";
 import Address from "./Address";
+import Guest from "./Guest";
+import Cart from "./Cart";
 
 export {
   User,
@@ -30,4 +32,6 @@ export {
   Notification,
   StoreSettings,
   Address,
+  Guest,
+  Cart,
 };

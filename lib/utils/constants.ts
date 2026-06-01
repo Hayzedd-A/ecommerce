@@ -29,7 +29,7 @@ export const ORDER_STATUSES = [
 ] as const;
 
 /** Payment providers */
-export const PAYMENT_PROVIDERS = ["monnify"] as const;
+export const PAYMENT_PROVIDERS = ["monnify", "paystack"] as const;
 
 /** Review limits */
 export const MAX_REVIEW_RATING = 5;
@@ -64,11 +64,14 @@ export const NOTIFICATION_TYPES = [
 export const MAX_RECENTLY_VIEWED = 12;
 
 /** API base URL */
-export const API_BASE_URL = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+export const API_BASE_URL =
+  process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+
+export const PAYMENT_CALLBACK_URL = `${API_BASE_URL}/checkout`;
 
 /** Rate limiting */
 export const RATE_LIMIT = {
-  auth: { windowMs: 15 * 60 * 1000, max: 10 },      // 10 req / 15 min
-  api: { windowMs: 60 * 1000, max: 100 },             // 100 req / min
-  upload: { windowMs: 60 * 1000, max: 20 },            // 20 req / min
+  auth: { windowMs: 15 * 60 * 1000, max: 10 }, // 10 req / 15 min
+  api: { windowMs: 60 * 1000, max: 100 }, // 100 req / min
+  upload: { windowMs: 60 * 1000, max: 20 }, // 20 req / min
 };

@@ -16,7 +16,28 @@ export async function GET(req: NextRequest) {
     const filter: any = {};
     if (status) filter.status = status;
     const total = await Order.countDocuments(filter);
-    const items = await Order.find(filter).sort({ createdAt: -1 }).skip((page - 1) * limit).limit(limit).lean();
+    const items = await Order.aggregate([
+      { $match: filter },
+      { $sort: { createdAt: -1 } },
+      { $skip: (page - 1) * limit },
+      { $limit: limit },
+      {
+        $lookup: {
+          from: "payments",        // MongoDB collection name
+          localField: "_id",
+          foreignField: "orderId",
+          as: "payment",
+        },
+      },
+      {
+        $addFields: {
+          payment: { $arrayElemAt: ["$payment", 0] },
+        },
+      },
+      // {
+      //   $unset: "payment",         // remove the full payment array, keep only paymentStatus
+      // },
+    ]); 
     return NextResponse.json({ success: true, data: { items, total, page, limit } });
   } catch (error: any) {
     console.error("Admin orders list error:", error);

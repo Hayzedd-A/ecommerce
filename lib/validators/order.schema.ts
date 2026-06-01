@@ -40,11 +40,7 @@ export const CheckoutSchema = z
     discount: z.number().optional(),
     total: z.number(),
     subtotal: z.number(),
-    guestEmail: z
-      .string()
-      .email("Invalid email address")
-      .optional()
-      .or(z.literal("")),
+    guestEmail: z.email("Invalid email address").optional().or(z.literal("")),
     guestPhone: z
       .string()
       .regex(/^[0-9+]{11,14}$/, "Please provide a valid phone number")

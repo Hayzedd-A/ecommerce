@@ -2,6 +2,7 @@ import React from "react";
 import { notFound } from "next/navigation";
 import dbConnect from "@/lib/db/connect";
 import Product from "@/lib/db/models/Product";
+import ProductVariant from "@/lib/db/models/ProductVariant";
 import ProductDetailInteractive from "./ProductDetailInteractive";
 
 // Mock Fallbacks matching homepage slugs
@@ -90,7 +91,14 @@ async function getProductBySlug(slug: string) {
     await dbConnect();
     const product = await Product.findOne({ slug, status: "active" }).lean();
     if (product) {
-      return JSON.parse(JSON.stringify(product));
+      const variants = await ProductVariant.find({
+        productId: product._id,
+        isActive: true,
+      }).lean();
+      return {
+        ...JSON.parse(JSON.stringify(product)),
+        variants: JSON.parse(JSON.stringify(variants)),
+      };
     }
   } catch (error) {
     console.error("Error fetching product detail page by slug:", error);
@@ -120,7 +128,7 @@ export default async function ProductDetailPage({ params }: DetailPageProps) {
       </div>
 
       {/* Main Interactive Details Wrapper */}
-      <ProductDetailInteractive product={product} />
+      <ProductDetailInteractive product={product} variants={product.variants || []} />
 
       {/* Technical Specifications */}
       {product.specifications && Object.keys(product.specifications).length > 0 && (

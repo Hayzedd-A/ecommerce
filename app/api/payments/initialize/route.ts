@@ -9,8 +9,11 @@ import { CheckoutSchema } from "@/lib/validators/order.schema";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { generateOrderNumber } from "@/lib/utils/helpers";
 import { AuthService } from "@/lib/services/auth.service";
-import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
-import { Coupon } from "@/lib/db/models";
+import {
+  COOKIE_ACCESS_TOKEN,
+  PAYMENT_CALLBACK_URL,
+} from "@/lib/utils/constants";
+import { Coupon, StoreSettings, ProductVariant } from "@/lib/db/models";
 import mongoose from "mongoose";
 
 export async function POST(req: NextRequest) {
@@ -33,9 +36,6 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    console.log("checkout body: ", body);
-    console.log("result: ", result);
-
     const {
       shippingAddress,
       items,
@@ -49,14 +49,17 @@ export async function POST(req: NextRequest) {
     // Retrieve user identity from either proxy headers or access token cookie.
     let userId = req.headers.get("x-user-id");
     let userEmail = req.headers.get("x-user-email");
+    const guestIdHeader = req.headers.get("x-guest-id");
 
     if (!userId) {
       const accessToken = req.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
+      console.log("Access token from cookie:", accessToken);
       if (accessToken) {
         try {
           const payload = AuthService.verifyAccessToken(accessToken);
           userId = payload.id;
           userEmail = payload.email;
+          console.log("Authenticated user from token:", payload);
         } catch {
           userId = null;
           userEmail = null;
@@ -77,23 +80,44 @@ export async function POST(req: NextRequest) {
         );
       }
 
+      let activePrice = dbProduct.discountPrice || dbProduct.price;
+      let stockAvailable = dbProduct.stock;
+      let variantName = "";
+
+      if (item.variantId) {
+        const dbVariant = await ProductVariant.findById(item.variantId);
+        if (!dbVariant || dbVariant.productId.toString() !== item.productId.toString()) {
+          return NextResponse.json(
+            { success: false, message: `Variant not found or invalid: ${item.name}` },
+            { status: 400 },
+          );
+        }
+        if (dbVariant.price) {
+          activePrice = dbVariant.price;
+        }
+        stockAvailable = dbVariant.stock;
+        variantName = Array.from(dbVariant.attributes.entries())
+          .map(([k, v]) => `${k}: ${v}`)
+          .join(" / ");
+      }
+
       // Check stock
-      if (dbProduct.trackStock && dbProduct.stock < item.quantity) {
+      if (dbProduct.trackStock && stockAvailable < item.quantity) {
         return NextResponse.json(
           {
             success: false,
-            message: `Insufficient stock for product: ${dbProduct.name}`,
+            message: `Insufficient stock for product: ${dbProduct.name} ${variantName}`,
           },
           { status: 400 },
         );
       }
 
-      const activePrice = dbProduct.discountPrice || dbProduct.price;
       subtotal += activePrice * item.quantity;
 
       verifiedItems.push({
         productId: dbProduct._id,
-        name: dbProduct.name,
+        variantId: item.variantId || undefined,
+        name: variantName ? `${dbProduct.name} (${variantName})` : dbProduct.name,
         price: activePrice,
         quantity: item.quantity,
         image: dbProduct.images?.[0]?.url || item.image,
@@ -103,9 +127,7 @@ export async function POST(req: NextRequest) {
     // Apply coupon discount on server
     let discount = 0;
     if (couponUsed) {
-      console.log("coupon used: ", couponUsed);
       const dbCoupon = await Coupon.findOne({ code: couponUsed });
-      console.log("coupon: ", dbCoupon);
       if (dbCoupon) {
         if (dbCoupon.usedCount >= dbCoupon.maxUses) {
           return NextResponse.json(
@@ -115,19 +137,17 @@ export async function POST(req: NextRequest) {
         }
         const isExpired = dbCoupon.expiresAt < new Date();
         const isStarted = dbCoupon.startsAt < new Date();
-        console.log("isExpired: ", isExpired);
-        console.log("isStarted: ", isStarted);
         if (!isExpired && isStarted && dbCoupon.isActive) {
           if (dbCoupon.type === "percentage") {
             discount = Math.round(subtotal * (dbCoupon.value / 100));
           } else if (dbCoupon.type === "fixed") {
             discount = dbCoupon.value;
           }
-          await Coupon.updateOne(
-            { _id: dbCoupon._id },
-            { $inc: { usedCount: 1 } },
-            { session },
-          );
+          // await Coupon.updateOne(
+          //   { _id: dbCoupon._id },
+          //   { $inc: { usedCount: 1 } },
+          //   { session },
+          // );
         }
       }
     }
@@ -163,30 +183,32 @@ export async function POST(req: NextRequest) {
 
     const total = subtotal + deliveryFee - discount;
 
+    // Fetch settings to determine active provider
+    const settings = await (StoreSettings as any).getSettings();
+    const activeProviderName = settings.paymentSettings?.activeProvider || "monnify";
+
     // Create unique order number & payment reference
     const orderNumber = generateOrderNumber();
     const paymentReference = `PAY-${crypto.randomBytes(8).toString("hex").toUpperCase()}`;
 
-    // Create Order in DB (status: pending_payment)
+    // Create Order in DB (status: pending)
     const order = new Order({
       userId: userId || undefined,
       orderNumber,
       items: verifiedItems,
       shippingAddress,
-      status: "pending_payment",
+      status: "pending",
       subtotal,
       deliveryFee,
       deliveryMethod: result.data.deliveryMethod,
       deliveryLocationId: deliveryLocation?._id,
-      deliveryLocationLabel: deliveryLocation
-        ? `${deliveryLocation.name} (${deliveryLocation.city}, ${deliveryLocation.state})`
-        : undefined,
       discount,
       total,
       couponUsed: couponUsed || undefined,
       isGuest,
       guestEmail: isGuest ? guestEmail : undefined,
       guestPhone: isGuest ? guestPhone : undefined,
+      guestId: (isGuest && guestIdHeader) ? guestIdHeader : undefined,
       notes,
     });
     const payment = new Payment({
@@ -195,59 +217,61 @@ export async function POST(req: NextRequest) {
       reference: paymentReference,
       amount: total,
       status: "initialized",
-      provider: "monnify",
+      provider: activeProviderName,
     });
     order.paymentId = payment._id;
     await order.save({ session });
     await payment.save({ session });
 
+
     // Link payment inside order
 
     // Decrement inventory stock
-    for (const item of items) {
-      await Product.findByIdAndUpdate(
-        item.productId,
-        {
-          $inc: { stock: -item.quantity, salesCount: item.quantity },
-        },
-        { session },
-      );
-    }
+    // for (const item of items) {
+    //   await Product.findByIdAndUpdate(
+    //     item.productId,
+    //     {
+    //       $inc: { stock: -item.quantity, salesCount: item.quantity },
+    //     },
+    //     { session },
+    //   );
+    // }
 
-    // Attempt Monnify Initialization
+    // Attempt Payment Initialization
     let checkoutUrl = "";
     let checkoutSuccess = false;
 
-    const hasCredentials =
-      !!process.env.MONNIFY_API_KEY &&
-      !!process.env.MONNIFY_SECRET_KEY &&
-      !!process.env.MONNIFY_CONTRACT_CODE;
-
-    if (hasCredentials) {
+    try {
+      const activeProvider = await paymentManager.getActivatedProvider();
+      console.log("Active payment provider:", activeProvider.name);
+      console.log("email: ", userEmail, guestEmail);
       const email = isGuest ? guestEmail! : userEmail!;
       const name = isGuest ? shippingAddress.fullName : "Store User";
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-      const paymentResult = await paymentManager
-        .getProvider("monnify")
-        .initializePayment({
-          amount: total,
-          customerEmail: email,
-          customerName: name,
-          paymentReference,
-          callbackUrl: `${appUrl}/api/payments/callback`,
-          description: `Order ${orderNumber} payment`,
-        });
-      console.log("paymentResult: ", paymentResult);
+      const paymentResult = await activeProvider.initializePayment({
+        amount: total,
+        customerEmail: email,
+        customerName: name,
+        paymentReference,
+        callbackUrl: PAYMENT_CALLBACK_URL,
+        description: `Order ${orderNumber} payment`,
+      });
+
       if (paymentResult.success && paymentResult.checkoutUrl) {
         checkoutUrl = paymentResult.checkoutUrl;
         checkoutSuccess = true;
 
-        // Update payment gateway response
+        // Update payment record with provider and metadata
+        payment.provider = activeProvider.name as any;
         payment.status = "pending";
         payment.metadata = paymentResult.gatewayResponse;
         await payment.save({ session });
+      } else {
+        throw new Error(paymentResult.message || "Payment initialization failed");
       }
+    } catch (error: any) {
+      console.error("Payment provider error:", error.message);
+      throw error;
     }
 
     // Return Checkout configurations
@@ -260,21 +284,7 @@ export async function POST(req: NextRequest) {
         checkoutUrl,
       });
     } else {
-      // Graceful Development/Mock mode when credentials are not configured
-      // Set payment status directly to "paid" & order status to "paid" for immediate validation
       throw new Error("Payment initialization failed");
-      // payment.status = "paid";
-      // payment.paidAt = new Date();
-      // await payment.save({ session });
-
-      // order.status = "paid";
-      // await order.save({ session });
-
-      // return NextResponse.json({
-      //   success: true,
-      //   message: "Mock payment initialized successfully (Development Mode)",
-      //   paymentReference,
-      // });
     }
   } catch (error: unknown) {
     await session.abortTransaction();

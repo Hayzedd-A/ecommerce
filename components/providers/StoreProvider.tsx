@@ -4,6 +4,7 @@ import { useRef } from "react";
 import { Provider } from "react-redux";
 import { makeStore, AppStore } from "@/lib/store/store";
 import AuthInit from "./AuthInit";
+import CartSync from "./CartSync";
 
 export default function StoreProvider({
   children,
@@ -17,7 +18,10 @@ export default function StoreProvider({
 
   return (
     <Provider store={storeRef.current}>
-      <AuthInit>{children}</AuthInit>
+      <AuthInit>
+        <CartSync />
+        {children}
+      </AuthInit>
     </Provider>
   );
 }

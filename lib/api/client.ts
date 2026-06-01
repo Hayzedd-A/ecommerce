@@ -4,6 +4,7 @@
 
 import axios from "axios";
 import { API_BASE_URL } from "@/lib/utils/constants";
+import { getGuestId } from "@/lib/utils/guest";
 
 /** Routes that require authentication */
 export const protectedPaths = ["/account"];
@@ -29,6 +30,15 @@ const apiClient = axios.create({
     "Content-Type": "application/json",
   },
   withCredentials: true, // Send cookies (access/refresh tokens)
+});
+
+/** ---------- Request interceptor ---------- */
+apiClient.interceptors.request.use((config) => {
+  const guestId = getGuestId();
+  if (guestId) {
+    config.headers["x-guest-id"] = guestId;
+  }
+  return config;
 });
 
 /** ---------- Response interceptor ---------- */

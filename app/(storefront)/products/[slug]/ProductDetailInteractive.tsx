@@ -6,7 +6,7 @@ import { toast } from "react-hot-toast";
 
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { addToCart } from "@/lib/store/slices/cartSlice";
-import { toggleWishlist } from "@/lib/store/slices/wishlistSlice";
+import { toggleWishlistServer } from "@/lib/store/slices/wishlistSlice";
 import { formatCurrency } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/helpers";
 import { Button } from "@/components/ui/Button";
@@ -25,48 +25,80 @@ interface ProductDetailInteractiveProps {
     reviewCount?: number;
     specifications?: Record<string, string>;
   };
+  variants: any[];
 }
 
-export default function ProductDetailInteractive({ product }: ProductDetailInteractiveProps) {
+export default function ProductDetailInteractive({
+  product,
+  variants = [],
+}: ProductDetailInteractiveProps) {
   const dispatch = useAppDispatch();
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
-  
+
   const isWishlisted = wishlistItems.some((id) => id === product._id);
 
-  const [activeImage, setActiveImage] = useState(product.images?.[0]?.url || "");
+  const [activeImage, setActiveImage] = useState(
+    product.images?.[0]?.url || "",
+  );
   const [quantity, setQuantity] = useState(1);
 
-  // Variations (Mocked/Selected for interaction)
-  const [selectedColor, setSelectedColor] = useState("Charcoal");
-  const [selectedSize, setSelectedSize] = useState("Standard");
+  // Group attributes from variants
+  const attributeNames = Array.from(
+    new Set(variants.flatMap((v) => Object.keys(v.attributes))),
+  );
 
-  const colors = ["Charcoal", "Platinum Silver", "Midnight Blue"];
-  const sizes = ["Standard", "Pro Edition"];
+  const [selectedAttributes, setSelectedAttributes] = useState<
+    Record<string, string>
+  >(() => {
+    if (variants.length > 0) {
+      return variants[0].attributes;
+    }
+    return {};
+  });
+
+  // Find currently selected variant
+  const selectedVariant = variants.find((v) => {
+    return Object.entries(selectedAttributes).every(
+      ([key, val]) => v.attributes[key] === val,
+    );
+  });
+
+  const currentPrice =
+    selectedVariant?.price || product.discountPrice || product.price;
+  const currentStock = selectedVariant ? selectedVariant.stock : product.stock;
+  const isOutOfStock = currentStock < 1;
+
+  const handleAttributeChange = (key: string, value: string) => {
+    setSelectedAttributes((prev) => ({ ...prev, [key]: value }));
+  };
 
   const handleAddToCart = () => {
-    if (product.stock < 1) {
+    if (isOutOfStock) {
       toast.error("This item is currently out of stock");
       return;
     }
 
-    const priceToCharge = product.discountPrice || product.price;
+    const variantLabel = Object.entries(selectedAttributes)
+      .map(([k, v]) => `${k}: ${v}`)
+      .join(" / ");
 
     dispatch(
       addToCart({
         productId: product._id,
+        variantId: selectedVariant?._id,
         name: product.name,
-        price: priceToCharge,
+        price: currentPrice,
         quantity: quantity,
         image: activeImage,
-        stock: product.stock,
-        variantLabel: `${selectedColor} / ${selectedSize}`,
-      })
+        stock: currentStock,
+        variantLabel: variantLabel,
+      }),
     );
     toast.success(`${product.name} (${quantity} items) added to cart!`);
   };
 
   const handleWishlistToggle = () => {
-    dispatch(toggleWishlist(product._id));
+    dispatch(toggleWishlistServer(product._id));
     if (isWishlisted) {
       toast.success("Removed from wishlist");
     } else {
@@ -142,17 +174,11 @@ export default function ProductDetailInteractive({ product }: ProductDetailInter
 
         {/* Pricing Panel */}
         <div className="p-4 bg-surface-secondary border border-border rounded-2xl flex items-baseline gap-3">
-          {hasDiscount ? (
-            <>
-              <span className="text-2xl font-black text-foreground">
-                {formatCurrency(product.discountPrice!)}
-              </span>
-              <span className="text-sm text-muted-line-through">
-                {formatCurrency(product.price)}
-              </span>
-            </>
-          ) : (
-            <span className="text-2xl font-black text-foreground">
+          <span className="text-2xl font-black text-foreground">
+            {formatCurrency(currentPrice)}
+          </span>
+          {selectedVariant?.price === undefined && hasDiscount && (
+            <span className="text-sm text-muted-line-through">
               {formatCurrency(product.price)}
             </span>
           )}
@@ -166,52 +192,46 @@ export default function ProductDetailInteractive({ product }: ProductDetailInter
           </p>
         </div>
 
-        {/* Variant Selectors Color */}
-        <div className="space-y-3">
-          <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Select Color: <span className="text-foreground">{selectedColor}</span></h4>
-          <div className="flex flex-wrap gap-2">
-            {colors.map((c) => (
-              <button
-                key={c}
-                onClick={() => setSelectedColor(c)}
-                className={cn(
-                  "px-4 py-2 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer",
-                  selectedColor === c
-                    ? "bg-primary-500 border-primary-500 text-white shadow-soft"
-                    : "bg-surface border-border text-foreground hover:bg-surface-secondary"
-                )}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
-        </div>
+        {/* Dynamic Variant Selectors */}
+        {attributeNames.map((attrName) => {
+          const values = Array.from(
+            new Set(variants.map((v) => v.attributes[attrName])),
+          ).filter(Boolean);
 
-        {/* Variant Selectors Size */}
-        <div className="space-y-3">
-          <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">Select Edition: <span className="text-foreground">{selectedSize}</span></h4>
-          <div className="flex flex-wrap gap-2">
-            {sizes.map((s) => (
-              <button
-                key={s}
-                onClick={() => setSelectedSize(s)}
-                className={cn(
-                  "px-4 py-2 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer",
-                  selectedSize === s
-                    ? "bg-primary-500 border-primary-500 text-white shadow-soft"
-                    : "bg-surface border-border text-foreground hover:bg-surface-secondary"
-                )}
-              >
-                {s}
-              </button>
-            ))}
-          </div>
-        </div>
+          if (values.length === 0) return null;
+
+          return (
+            <div key={attrName} className="space-y-3">
+              <h4 className="font-bold text-xs uppercase tracking-wider text-muted-foreground">
+                Select {attrName}:{" "}
+                <span className="text-foreground">
+                  {selectedAttributes[attrName]}
+                </span>
+              </h4>
+              <div className="flex flex-wrap gap-2">
+                {values.map((val: any) => (
+                  <button
+                    key={val}
+                    onClick={() => handleAttributeChange(attrName, val)}
+                    className={cn(
+                      "px-4 py-2 rounded-lg border text-xs font-semibold uppercase tracking-wider transition-all cursor-pointer",
+                      selectedAttributes[attrName] === val
+                        ? "bg-primary-500 border-primary-500 text-white shadow-soft"
+                        : "bg-surface border-border text-foreground hover:bg-surface-secondary",
+                    )}
+                  >
+                    {val}
+                  </button>
+                ))}
+              </div>
+            </div>
+          );
+        })}
 
         {/* Action Panel: Qty & Add Button */}
         <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-border">
           {/* Qty field */}
-          {product.stock > 0 && (
+          {!isOutOfStock && (
             <div className="flex items-center border border-border rounded-xl bg-surface h-12">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
@@ -223,7 +243,9 @@ export default function ProductDetailInteractive({ product }: ProductDetailInter
                 {quantity}
               </span>
               <button
-                onClick={() => setQuantity(Math.min(product.stock, quantity + 1))}
+                onClick={() =>
+                  setQuantity(Math.min(currentStock, quantity + 1))
+                }
                 className="px-3 h-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground rounded-r-xl transition-colors cursor-pointer"
               >
                 +
@@ -234,7 +256,7 @@ export default function ProductDetailInteractive({ product }: ProductDetailInter
           {/* Add to Cart button */}
           <Button
             onClick={handleAddToCart}
-            disabled={product.stock < 1}
+            disabled={isOutOfStock}
             variant="primary"
             className="flex-1 py-3 h-12 shadow-soft hover:shadow-card font-bold uppercase tracking-wider"
             leftIcon={<ShoppingCart className="h-5 w-5" />}

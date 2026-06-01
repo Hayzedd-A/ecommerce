@@ -10,17 +10,25 @@ import {
 
 export class MonnifyProvider implements PaymentProvider {
   name = "monnify";
-  private apiKey: string;
-  private secretKey: string;
-  private contractCode: string;
-  private baseUrl: string;
+  private apiKey: string = "";
+  private secretKey: string = "";
+  private contractCode: string = "";
+  private baseUrl: string = "https://sandbox.monnify.com";
 
   constructor() {
-    this.apiKey = process.env.MONNIFY_API_KEY || "";
-    this.secretKey = process.env.MONNIFY_SECRET_KEY || "";
-    this.contractCode = process.env.MONNIFY_CONTRACT_CODE || "";
-    this.baseUrl =
-      process.env.MONNIFY_BASE_URL || "https://sandbox.monnify.com";
+    // Credentials will be set via setConfig
+  }
+
+  setConfig(config: {
+    apiKey: string;
+    secretKey: string;
+    contractCode: string;
+    baseUrl?: string;
+  }): void {
+    this.apiKey = config.apiKey || "";
+    this.secretKey = config.secretKey || "";
+    this.contractCode = config.contractCode || "";
+    this.baseUrl = config.baseUrl || "https://sandbox.monnify.com";
   }
 
   /**
@@ -29,7 +37,7 @@ export class MonnifyProvider implements PaymentProvider {
   private async getAccessToken(): Promise<string> {
     if (!this.apiKey || !this.secretKey) {
       throw new Error(
-        "Monnify API credentials are not configured in environment variables.",
+        "Monnify API credentials are not configured.",
       );
     }
 

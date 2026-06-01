@@ -1,7 +1,8 @@
 import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IWishlistDocument extends Document {
-  userId: mongoose.Types.ObjectId;
+  userId?: mongoose.Types.ObjectId;
+  guestId?: string;
   productId: mongoose.Types.ObjectId;
   createdAt: Date;
 }
@@ -11,7 +12,10 @@ const WishlistSchema = new Schema<IWishlistDocument>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      index: true,
+    },
+    guestId: {
+      type: String,
       index: true,
     },
     productId: {
@@ -25,8 +29,9 @@ const WishlistSchema = new Schema<IWishlistDocument>(
   }
 );
 
-/* One product per user in wishlist */
-WishlistSchema.index({ userId: 1, productId: 1 }, { unique: true });
+/* One product per user/guest in wishlist */
+WishlistSchema.index({ userId: 1, productId: 1 }, { unique: true, sparse: true });
+WishlistSchema.index({ guestId: 1, productId: 1 }, { unique: true, sparse: true });
 
 export default mongoose.models.Wishlist ||
   mongoose.model<IWishlistDocument>("Wishlist", WishlistSchema);

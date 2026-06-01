@@ -12,7 +12,23 @@ export async function PUT(req: NextRequest) {
     const settings = await StoreSettings.getSettings();
     // Merge allowed fields only
     const allowed = [
-      'storeName','logo','favicon','description','address','phone','email','socialLinks','businessHours','seoMeta','themeColors','deliveryZones','pickupEnabled','pickupAddress','currency','currencySymbol'
+      "storeName",
+      "logo",
+      "favicon",
+      "description",
+      "address",
+      "phone",
+      "email",
+      "socialLinks",
+      "businessHours",
+      "seoMeta",
+      "themeColors",
+      "deliveryZones",
+      "pickupEnabled",
+      "pickupAddress",
+      "currency",
+      "currencySymbol",
+      "paymentSettings",
     ];
     for (const k of allowed) {
       if (Object.prototype.hasOwnProperty.call(body, k)) (settings as any)[k] = (body as any)[k];

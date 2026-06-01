@@ -4,6 +4,7 @@ import Order from "@/lib/db/models/Order";
 import Payment from "@/lib/db/models/Payment";
 import Notification from "@/lib/db/models/Notification";
 import User from "@/lib/db/models/User";
+import Cart from "@/lib/db/models/Cart";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { EmailService } from "@/lib/services/email.service";
 
@@ -15,13 +16,32 @@ export async function POST(req: NextRequest) {
     const rawBody = await req.text();
     const headersList = Object.fromEntries(req.headers.entries());
 
-    // Verify webhook signature
-    const provider = paymentManager.getProvider("monnify");
+    // Detect provider from headers
+    let providerName = "";
+    if (headersList["monnify-signature"]) {
+      providerName = "monnify";
+    } else if (headersList["x-paystack-signature"]) {
+      providerName = "paystack";
+    }
+
+    if (!providerName) {
+      console.warn("⚠️ Unknown payment provider webhook received.");
+      return NextResponse.json(
+        { success: false, message: "Unknown provider" },
+        { status: 400 },
+      );
+    }
+
+    // Verify webhook signature with configured provider
+    const provider = await paymentManager.getConfiguredProvider(providerName);
     const verifyResult = await provider.verifyWebhook(headersList, rawBody);
 
     if (!verifyResult.isValid || !verifyResult.reference) {
-      console.warn("⚠️ Invalid Monnify webhook signature received.");
-      return NextResponse.json({ success: false, message: "Invalid signature" }, { status: 400 });
+      console.warn(`⚠️ Invalid ${providerName} webhook signature received.`);
+      return NextResponse.json(
+        { success: false, message: "Invalid signature" },
+        { status: 400 },
+      );
     }
 
     const { reference, status, amount } = verifyResult;
@@ -51,6 +71,13 @@ export async function POST(req: NextRequest) {
       if (status === "paid") {
         order.status = "paid";
         await order.save();
+
+        // Clear cart
+        if (order.userId) {
+          await Cart.findOneAndDelete({ userId: order.userId });
+        } else if (order.guestId) {
+          await Cart.findOneAndDelete({ guestId: order.guestId });
+        }
 
         // Retrieve user or guest details
         const email = order.isGuest ? order.guestEmail : "";

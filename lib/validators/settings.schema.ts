@@ -48,6 +48,25 @@ export const StoreSettingsSchema = z.object({
       ogImage: z.string().optional(),
     })
     .optional(),
+  paymentSettings: z
+    .object({
+      activeProvider: z.enum(["monnify", "paystack"]).default("monnify"),
+      monnify: z
+        .object({
+          apiKey: z.string().optional().or(z.literal("")),
+          secretKey: z.string().optional().or(z.literal("")),
+          contractCode: z.string().optional().or(z.literal("")),
+          baseUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
+        })
+        .optional(),
+      paystack: z
+        .object({
+          secretKey: z.string().optional().or(z.literal("")),
+          publicKey: z.string().optional().or(z.literal("")),
+        })
+        .optional(),
+    })
+    .optional(),
 });
 
 export type StoreSettingsInput = z.infer<typeof StoreSettingsSchema>;

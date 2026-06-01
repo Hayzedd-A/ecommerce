@@ -1,5 +1,25 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
 import type { ICartItem } from "@/lib/types";
+import apiClient from "@/lib/api/client";
+
+export const fetchCart = createAsyncThunk("cart/fetchCart", async () => {
+  const response = await apiClient.get("/cart");
+  return response.data.data;
+});
+
+export const syncCart = createAsyncThunk(
+  "cart/syncCart",
+  async (items: ICartItem[]) => {
+    const response = await apiClient.post("/cart", {
+      items: items.map((i) => ({
+        productId: i.productId,
+        variantId: i.variantId,
+        quantity: i.quantity,
+      })),
+    });
+    return response.data.data;
+  }
+);
 
 interface CartState {
   items: ICartItem[];
@@ -119,6 +139,24 @@ const cartSlice = createSlice({
     hydrateCart(_state, action: PayloadAction<CartState>) {
       return action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchCart.fulfilled, (state, action) => {
+      if (action.payload?.items) {
+        state.items = action.payload.items.map((item: any) => ({
+          productId: item.productId._id,
+          variantId: item.variantId?._id,
+          name: item.productId.name,
+          price: item.variantId?.price || item.productId.discountPrice || item.productId.price,
+          quantity: item.quantity,
+          image: item.variantId?.images?.[0]?.url || item.productId.images?.[0]?.url,
+          stock: item.variantId?.stock || item.productId.stock,
+          variantLabel: item.variantId?.attributes ? 
+            Object.entries(item.variantId.attributes).map(([k, v]) => `${k}: ${v}`).join(" / ") : undefined
+        }));
+        recalculate(state);
+      }
+    });
   },
 });
 

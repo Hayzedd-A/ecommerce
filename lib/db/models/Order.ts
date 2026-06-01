@@ -21,14 +21,16 @@ export interface IOrderDocument extends Document {
     zipCode?: string;
   };
   status:
-    | "pending_payment"
-    | "paid"
+    | "pending"
     | "processing"
+    | "in_progress"
     | "ready_for_pickup"
     | "completed"
     | "cancelled";
   subtotal: number;
   deliveryFee: number;
+  deliveryMethod: "delivery" | "pickup";
+  deliveryLocationId?: mongoose.Types.ObjectId;
   discount: number;
   total: number;
   couponUsed?: string;
@@ -100,14 +102,14 @@ const OrderSchema = new Schema<IOrderDocument>(
     status: {
       type: String,
       enum: [
-        "pending_payment",
-        "paid",
+        "pending",
         "processing",
+        "in_progress",
         "ready_for_pickup",
         "completed",
         "cancelled",
       ],
-      default: "pending_payment",
+      default: "pending",
     },
     subtotal: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
@@ -120,7 +122,6 @@ const OrderSchema = new Schema<IOrderDocument>(
       type: Schema.Types.ObjectId,
       ref: "DeliveryLocation",
     },
-    deliveryLocationLabel: String,
     discount: { type: Number, default: 0, min: 0 },
     total: { type: Number, required: true, min: 0 },
     couponUsed: String,
@@ -132,6 +133,7 @@ const OrderSchema = new Schema<IOrderDocument>(
     isGuest: { type: Boolean, default: false },
     guestEmail: String,
     guestPhone: String,
+    guestId: String,
   },
   {
     timestamps: true,

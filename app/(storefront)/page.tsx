@@ -159,7 +159,7 @@ export default async function HomePage() {
             <ShieldCheck className="h-6 w-6 text-primary-500 flex-shrink-0" />
             <div>
               <h4 className="font-bold text-foreground text-sm">Secure Checkout</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Monnify secured card & account transfers.</p>
+              <p className="text-xs text-muted-foreground mt-0.5">Secured card & account transfers.</p>
             </div>
           </div>
           <div className="flex items-start gap-4">

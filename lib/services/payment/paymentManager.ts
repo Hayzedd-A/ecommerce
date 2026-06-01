@@ -1,5 +1,7 @@
 import { PaymentProvider } from "./types";
 import { MonnifyProvider } from "./monnify.provider";
+import { PaystackProvider } from "./paystack.provider";
+import StoreSettings from "@/lib/db/models/StoreSettings";
 
 export class PaymentManager {
   private static instance: PaymentManager;
@@ -10,6 +12,10 @@ export class PaymentManager {
     // Register Monnify
     const monnify = new MonnifyProvider();
     this.providers.set(monnify.name, monnify);
+
+    // Register Paystack
+    const paystack = new PaystackProvider();
+    this.providers.set(paystack.name, paystack);
 
     // Default can be set via env var or falls back to monnify
     const envProvider = process.env.PAYMENT_PROVIDER_DEFAULT;
@@ -45,6 +51,39 @@ export class PaymentManager {
   }
 
   /**
+   * Get the active provider from database settings and configure it
+   */
+  public async getActivatedProvider(): Promise<PaymentProvider> {
+    const settings = await StoreSettings.getSettings();
+    const active = settings.paymentSettings?.activeProvider || "monnify";
+    const provider = this.getProvider(active);
+
+    if (active === "monnify" && settings.paymentSettings?.monnify) {
+      provider.setConfig(settings.paymentSettings.monnify);
+    } else if (active === "paystack" && settings.paymentSettings?.paystack) {
+      provider.setConfig(settings.paymentSettings.paystack);
+    }
+
+    return provider;
+  }
+
+  /**
+   * Get a specific provider and configure it from database settings
+   */
+  public async getConfiguredProvider(name: string): Promise<PaymentProvider> {
+    const settings = await StoreSettings.getSettings();
+    const provider = this.getProvider(name);
+
+    if (name === "monnify" && settings.paymentSettings?.monnify) {
+      provider.setConfig(settings.paymentSettings.monnify);
+    } else if (name === "paystack" && settings.paymentSettings?.paystack) {
+      provider.setConfig(settings.paymentSettings.paystack);
+    }
+
+    return provider;
+  }
+
+  /**
    * Get list of registered provider names
    */
   public getRegisteredProviders(): string[] {
@@ -54,4 +93,9 @@ export class PaymentManager {
 
 // Export singleton instance of PaymentManager
 export const paymentManager = PaymentManager.getInstance();
-export type { PaymentProvider, PaymentInitResult, PaymentVerifyResult, WebhookVerifyResult } from "./types";
+export type {
+  PaymentProvider,
+  PaymentInitResult,
+  PaymentVerifyResult,
+  WebhookVerifyResult,
+} from "./types";

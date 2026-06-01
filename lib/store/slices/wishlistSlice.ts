@@ -1,4 +1,18 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk, type PayloadAction } from "@reduxjs/toolkit";
+import apiClient from "@/lib/api/client";
+
+export const fetchWishlist = createAsyncThunk("wishlist/fetchWishlist", async () => {
+  const response = await apiClient.get("/wishlist");
+  return response.data.data;
+});
+
+export const toggleWishlistServer = createAsyncThunk(
+  "wishlist/toggleWishlistServer",
+  async (productId: string) => {
+    const response = await apiClient.post("/wishlist", { productId });
+    return { productId, action: response.data.action };
+  }
+);
 
 interface WishlistState {
   items: string[]; // Array of product IDs
@@ -37,6 +51,11 @@ const wishlistSlice = createSlice({
     setWishlistLoading(state, action: PayloadAction<boolean>) {
       state.isLoading = action.payload;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(fetchWishlist.fulfilled, (state, action) => {
+      state.items = action.payload;
+    });
   },
 });
 
