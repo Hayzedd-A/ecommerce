@@ -33,5 +33,7 @@ const WishlistSchema = new Schema<IWishlistDocument>(
 WishlistSchema.index({ userId: 1, productId: 1 }, { unique: true, sparse: true });
 WishlistSchema.index({ guestId: 1, productId: 1 }, { unique: true, sparse: true });
 
-export default mongoose.models.Wishlist ||
+const Wishlist =  (mongoose.models.Wishlist as mongoose.Model<IWishlistDocument>) ||
   mongoose.model<IWishlistDocument>("Wishlist", WishlistSchema);
+
+export default Wishlist;

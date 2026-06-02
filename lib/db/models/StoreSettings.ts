@@ -164,5 +164,7 @@ StoreSettingsSchema.statics.getSettings = async function () {
   return settings;
 };
 
-export default mongoose.models.StoreSettings ||
+const StoreSettings = (mongoose.models.StoreSettings as mongoose.Model<IStoreSettingsDocument>) ||
   mongoose.model<IStoreSettingsDocument>("StoreSettings", StoreSettingsSchema);
+  
+export default StoreSettings;

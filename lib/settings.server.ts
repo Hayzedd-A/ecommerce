@@ -7,10 +7,18 @@ import type { IStoreSettings } from "@/lib/types";
 
 export async function getStoreSettings(): Promise<IStoreSettings> {
   await dbConnect();
-  const settingsDoc = await StoreSettings.getSettings();
+  let settings = await StoreSettings.findOne();
+  if (!settings) {
+    settings = await StoreSettings.create({
+      storeName: "My Store",
+      currency: "NGN",
+      currencySymbol: "₦",
+      deliveryZones: [],
+    });
+  }
 
   // Serialize mongoose document to plain JS object suitable for sending to client
-  const plain = JSON.parse(JSON.stringify(settingsDoc));
+  const plain = JSON.parse(JSON.stringify(settings));
   return plain as IStoreSettings;
 }
 

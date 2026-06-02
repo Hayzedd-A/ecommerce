@@ -90,5 +90,11 @@ ProductVariantSchema.pre("validate", async function () {
   }
 });
 
-export default mongoose.models.ProductVariant ||
-  mongoose.model<IProductVariantDocument>("ProductVariant", ProductVariantSchema);
+const ProductVariant =
+  (mongoose.models.ProductVariant as mongoose.Model<IProductVariantDocument>) ||
+  mongoose.model<IProductVariantDocument>(
+    "ProductVariant",
+    ProductVariantSchema
+  );
+
+export default ProductVariant;

@@ -14,7 +14,6 @@ const AdminSchema = new Schema<IAdminDocument>(
       type: Schema.Types.ObjectId,
       ref: "User",
       required: true,
-      unique: true,
     },
     permissions: [
       {
@@ -31,5 +30,8 @@ const AdminSchema = new Schema<IAdminDocument>(
 
 AdminSchema.index({ userId: 1 }, { unique: true });
 
-export default mongoose.models.Admin ||
+const Admin =
+  (mongoose.models.Admin as mongoose.Model<IAdminDocument>) ||
   mongoose.model<IAdminDocument>("Admin", AdminSchema);
+
+export default Admin;

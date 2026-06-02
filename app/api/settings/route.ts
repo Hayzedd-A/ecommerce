@@ -1,11 +1,11 @@
 import { NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
-import StoreSettings from "@/lib/db/models/StoreSettings";
+import getStoreSettings from "@/lib/settings.server";
 
 export async function GET() {
   try {
     await dbConnect();
-    const settings = await StoreSettings.getSettings();
+    const settings = await getStoreSettings();
 
     return NextResponse.json({ success: true, data: settings });
   } catch (error: unknown) {

@@ -4,7 +4,6 @@ import Order from "@/lib/db/models/Order";
 import Payment from "@/lib/db/models/Payment";
 import Notification from "@/lib/db/models/Notification";
 import User from "@/lib/db/models/User";
-import Cart from "@/lib/db/models/Cart";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { EmailService } from "@/lib/services/email.service";
 
@@ -69,15 +68,8 @@ export async function POST(req: NextRequest) {
     const order = await Order.findById(payment.orderId);
     if (order) {
       if (status === "paid") {
-        order.status = "paid";
-        await order.save();
-
-        // Clear cart
-        if (order.userId) {
-          await Cart.findOneAndDelete({ userId: order.userId });
-        } else if (order.guestId) {
-          await Cart.findOneAndDelete({ guestId: order.guestId });
-        }
+        // order.status = "paid";
+        // await order.save();
 
         // Retrieve user or guest details
         const email = order.isGuest ? order.guestEmail : "";

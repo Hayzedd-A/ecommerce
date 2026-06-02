@@ -55,5 +55,7 @@ const ReviewSchema = new Schema<IReviewDocument>(
 ReviewSchema.index({ productId: 1, userId: 1 }, { unique: true });
 ReviewSchema.index({ isApproved: 1, createdAt: -1 });
 
-export default mongoose.models.Review ||
+const Review =  (mongoose.models.Review as mongoose.Model<IReviewDocument>) ||
   mongoose.model<IReviewDocument>("Review", ReviewSchema);
+
+export default Review;

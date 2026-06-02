@@ -180,5 +180,7 @@ ProductSchema.index(
   { weights: { name: 10, tags: 5, description: 1 } },
 );
 
-export default mongoose.models.Product ||
+const Product = (mongoose.models.Product as mongoose.Model<IProductDocument>) ||
   mongoose.model<IProductDocument>("Product", ProductSchema);
+  
+export default Product;

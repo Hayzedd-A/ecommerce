@@ -60,5 +60,8 @@ const BannerSchema = new Schema<IBannerDocument>(
 /* Indexes */
 BannerSchema.index({ type: 1, isActive: 1, order: 1 });
 
-export default mongoose.models.Banner ||
+const Banner =
+  (mongoose.models.Banner as mongoose.Model<IBannerDocument>) ||
   mongoose.model<IBannerDocument>("Banner", BannerSchema);
+
+export default Banner;

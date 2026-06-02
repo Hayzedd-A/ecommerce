@@ -339,6 +339,20 @@ export interface IStoreSettings {
   pickupAddress?: string;
   currency: string;
   currencySymbol: string;
+  paymentSettings: {
+    activeProvider: "monnify" | "paystack";
+    monnify?: {
+      apiKey: string;
+      secretKey: string;
+      contractCode: string;
+      baseUrl: string;
+    };
+    paystack?: {
+      secretKey: string;
+      publicKey: string;
+    };
+  };
+  updatedAt: string;
 }
 
 /* ---------- Cart (client-side) ---------- */

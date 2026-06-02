@@ -40,12 +40,10 @@ const CartSchema = new Schema<ICartDocument>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: "User",
-      index: true,
-    },
+      },
     guestId: {
       type: String,
-      index: true,
-    },
+      },
     items: [CartItemSchema],
   },
   {
@@ -57,5 +55,8 @@ const CartSchema = new Schema<ICartDocument>(
 CartSchema.index({ userId: 1 }, { unique: true, sparse: true });
 CartSchema.index({ guestId: 1 }, { unique: true, sparse: true });
 
-export default mongoose.models.Cart ||
+const Cart =
+  (mongoose.models.Cart as mongoose.Model<ICartDocument>) ||
   mongoose.model<ICartDocument>("Cart", CartSchema);
+
+export default Cart;

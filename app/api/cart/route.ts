@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     const cart = await Cart.findOneAndUpdate(
       query,
       update,
-      { upsert: true, new: true }
+      { upsert: true, returnDocument: "after" }
     );
 
     return NextResponse.json({ success: true, data: cart });

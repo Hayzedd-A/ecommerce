@@ -66,8 +66,11 @@ const DeliveryLocationSchema = new Schema<IDeliveryLocationDocument>(
 
 DeliveryLocationSchema.index({ country: 1, state: 1, city: 1, type: 1 });
 
-export default mongoose.models.DeliveryLocation ||
+const DeliveryLocation =
+    (mongoose.models.DeliveryLocation as mongoose.Model<IDeliveryLocationDocument>) ||
     mongoose.model<IDeliveryLocationDocument>(
         "DeliveryLocation",
         DeliveryLocationSchema,
     );
+
+export default DeliveryLocation;

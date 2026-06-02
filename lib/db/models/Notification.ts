@@ -3,13 +3,13 @@ import mongoose, { Schema, type Document } from "mongoose";
 export interface INotificationDocument extends Document {
   userId?: mongoose.Types.ObjectId;
   type:
-    | "order_new"
-    | "order_status"
-    | "payment_success"
-    | "payment_failed"
-    | "low_stock"
-    | "review_new"
-    | "general";
+  | "order_new"
+  | "order_status"
+  | "payment_success"
+  | "payment_failed"
+  | "low_stock"
+  | "review_new"
+  | "general";
   title: string;
   message: string;
   isRead: boolean;
@@ -70,5 +70,6 @@ NotificationSchema.index(
   { expireAfterSeconds: 30 * 24 * 60 * 60 }
 );
 
-export default mongoose.models.Notification ||
-  mongoose.model<INotificationDocument>("Notification", NotificationSchema);
+const Notification = (mongoose.models.Notification as mongoose.Model<INotificationDocument>) || mongoose.model<INotificationDocument>("Notification", NotificationSchema);
+
+export default Notification;

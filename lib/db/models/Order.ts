@@ -38,6 +38,7 @@ export interface IOrderDocument extends Document {
   notes?: string;
   isGuest: boolean;
   guestEmail?: string;
+  guestId?: string;
   guestPhone?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -85,7 +86,6 @@ const OrderSchema = new Schema<IOrderDocument>(
     orderNumber: {
       type: String,
       required: true,
-      unique: true,
     },
     items: {
       type: [OrderItemSchema],
@@ -146,5 +146,7 @@ OrderSchema.index({ userId: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
 OrderSchema.index({ createdAt: -1 });
 
-export default mongoose.models.Order ||
+const Order =
+  (mongoose.models.Order as mongoose.Model<IOrderDocument>) ||
   mongoose.model<IOrderDocument>("Order", OrderSchema);
+  export default Order;

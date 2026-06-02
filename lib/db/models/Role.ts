@@ -13,7 +13,6 @@ const RoleSchema = new Schema<IRoleDocument>(
     name: {
       type: String,
       required: [true, "Role name is required"],
-      unique: true,
       trim: true,
       lowercase: true,
     },
@@ -35,5 +34,8 @@ const RoleSchema = new Schema<IRoleDocument>(
 
 RoleSchema.index({ name: 1 }, { unique: true });
 
-export default mongoose.models.Role ||
+const Role =
+  (mongoose.models.Role as mongoose.Model<IRoleDocument>) ||
   mongoose.model<IRoleDocument>("Role", RoleSchema);
+
+export default Role;

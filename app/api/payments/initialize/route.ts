@@ -129,14 +129,14 @@ export async function POST(req: NextRequest) {
     if (couponUsed) {
       const dbCoupon = await Coupon.findOne({ code: couponUsed });
       if (dbCoupon) {
-        if (dbCoupon.usedCount >= dbCoupon.maxUses) {
+        if (dbCoupon.maxUses && dbCoupon.usedCount >= dbCoupon.maxUses) {
           return NextResponse.json(
             { success: false, message: "Coupon has reached its maximum uses" },
             { status: 400 },
           );
         }
-        const isExpired = dbCoupon.expiresAt < new Date();
-        const isStarted = dbCoupon.startsAt < new Date();
+        const isExpired = dbCoupon.expiresAt && dbCoupon.expiresAt < new Date();
+        const isStarted = dbCoupon.startsAt && dbCoupon.startsAt < new Date();
         if (!isExpired && isStarted && dbCoupon.isActive) {
           if (dbCoupon.type === "percentage") {
             discount = Math.round(subtotal * (dbCoupon.value / 100));

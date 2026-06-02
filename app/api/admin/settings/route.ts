@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
-import StoreSettings from "@/lib/db/models/StoreSettings";
+import { StoreSettings } from "@/lib/db/models";
+import getStoreSettings from "@/lib/settings.server";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -9,7 +10,12 @@ export async function PUT(req: NextRequest) {
     const guard = await adminGuard(req);
     if (guard) return guard;
     const body = await req.json();
-    const settings = await StoreSettings.getSettings();
+    let settings = await StoreSettings.findOne();
+    if (!settings) {
+      settings = new StoreSettings({
+        ...(await getStoreSettings()) // creates default if not exists
+      });
+    }
     // Merge allowed fields only
     const allowed = [
       "storeName",

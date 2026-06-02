@@ -2,6 +2,7 @@ import { PaymentProvider } from "./types";
 import { MonnifyProvider } from "./monnify.provider";
 import { PaystackProvider } from "./paystack.provider";
 import StoreSettings from "@/lib/db/models/StoreSettings";
+import getStoreSettings from "@/lib/settings.server";
 
 export class PaymentManager {
   private static instance: PaymentManager;
@@ -54,7 +55,7 @@ export class PaymentManager {
    * Get the active provider from database settings and configure it
    */
   public async getActivatedProvider(): Promise<PaymentProvider> {
-    const settings = await StoreSettings.getSettings();
+    const settings = await getStoreSettings();
     const active = settings.paymentSettings?.activeProvider || "monnify";
     const provider = this.getProvider(active);
 
@@ -71,7 +72,7 @@ export class PaymentManager {
    * Get a specific provider and configure it from database settings
    */
   public async getConfiguredProvider(name: string): Promise<PaymentProvider> {
-    const settings = await StoreSettings.getSettings();
+    const settings = await getStoreSettings();
     const provider = this.getProvider(name);
 
     if (name === "monnify" && settings.paymentSettings?.monnify) {

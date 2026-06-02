@@ -17,7 +17,6 @@ const TagSchema = new Schema<ITagDocument>(
     slug: {
       type: String,
       required: true,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -29,5 +28,8 @@ const TagSchema = new Schema<ITagDocument>(
 
 TagSchema.index({ slug: 1 }, { unique: true });
 
-export default mongoose.models.Tag ||
+const Tag =
+  (mongoose.models.Tag as mongoose.Model<ITagDocument>) ||
   mongoose.model<ITagDocument>("Tag", TagSchema);
+
+export default Tag;

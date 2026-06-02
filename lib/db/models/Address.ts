@@ -75,5 +75,8 @@ const AddressSchema = new Schema<IAddressDocument>(
 /* Indexes */
 AddressSchema.index({ userId: 1, isDefault: -1 });
 
-export default mongoose.models.Address ||
+const Address =
+  (mongoose.models.Address as mongoose.Model<IAddressDocument>) ||
   mongoose.model<IAddressDocument>("Address", AddressSchema);
+
+export default Address;

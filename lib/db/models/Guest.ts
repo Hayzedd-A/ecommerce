@@ -42,5 +42,8 @@ const GuestSchema = new Schema<IGuestDocument>(
   }
 );
 
-export default mongoose.models.Guest ||
+const Guest =
+  (mongoose.models.Guest as mongoose.Model<IGuestDocument>) ||
   mongoose.model<IGuestDocument>("Guest", GuestSchema);
+
+  export default Guest;

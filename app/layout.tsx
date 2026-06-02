@@ -2,6 +2,11 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import getStoreSettings from "@/lib/settings.server";
+import { headers } from "next/headers";
+
+const headersList = await headers();
+
+const host = headersList.get("host");
 
 // Providers are composed via the `Providers` component imported below
 
@@ -40,29 +45,13 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const initialSettings = await getStoreSettings();
+    console.log("🌐 Rendering Providers with host:", host);
+
   return (
-    <html lang="en" className={`${inter.variable} h-full`} suppressHydrationWarning>
+    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} h-full`} suppressHydrationWarning>
       <head>
       </head>
       <body className="min-h-full flex flex-col antialiased">
-        {/* <Script id="theme-init" strategy="beforeInteractive">
-          {`
-            (function () {
-              try {
-                var theme = localStorage.getItem('theme');
-
-                if (theme) {
-                  document.documentElement.setAttribute('data-theme', theme);
-                } else if (
-                  window.matchMedia('(prefers-color-scheme: dark)').matches
-                ) {
-                  document.documentElement.setAttribute('data-theme', 'dark');
-                }
-              } catch (e) {}
-            })();
-          `} 
-        </Script>
-          */}
         <Providers initialSettings={initialSettings}>
           {children}
           <Toaster

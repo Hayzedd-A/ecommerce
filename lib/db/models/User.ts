@@ -68,5 +68,8 @@ UserSchema.index({ email: 1 }, { unique: true });
 UserSchema.index({ role: 1 });
 UserSchema.index({ createdAt: -1 });
 
-export default mongoose.models.User ||
+const User =
+  (mongoose.models.User as mongoose.Model<IUserDocument>) ||
   mongoose.model<IUserDocument>("User", UserSchema);
+
+export default User;

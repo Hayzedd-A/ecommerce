@@ -21,7 +21,6 @@ const PaymentSchema = new Schema<IPaymentDocument>(
       type: Schema.Types.ObjectId,
       ref: "Order",
       required: true,
-      index: true,
     },
     userId: {
       type: Schema.Types.ObjectId,
@@ -31,7 +30,6 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     reference: {
       type: String,
       required: true,
-      unique: true,
     },
     provider: {
       type: String,
@@ -68,5 +66,7 @@ PaymentSchema.index({ reference: 1 }, { unique: true });
 PaymentSchema.index({ orderId: 1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });
 
-export default mongoose.models.Payment ||
+const Payment =  (mongoose.models.Payment as mongoose.Model<IPaymentDocument>) ||
   mongoose.model<IPaymentDocument>("Payment", PaymentSchema);
+
+export default Payment;

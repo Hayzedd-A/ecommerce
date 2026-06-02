@@ -26,7 +26,6 @@ const CategorySchema = new Schema<ICategoryDocument>(
     },
     slug: {
       type: String,
-      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -64,5 +63,9 @@ CategorySchema.index({ slug: 1 }, { unique: true });
 CategorySchema.index({ parent: 1, order: 1 });
 CategorySchema.index({ isActive: 1 });
 
-export default mongoose.models.Category ||
+const Category =
+  (mongoose.models.Category as mongoose.Model<ICategoryDocument>) ||
   mongoose.model<ICategoryDocument>("Category", CategorySchema);
+
+export default Category;
+

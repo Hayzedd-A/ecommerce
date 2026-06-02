@@ -3,9 +3,9 @@
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { formatCurrency } from "@/lib/utils/formatters";
-// import { Badge } from "@/components/ui/Badge";
+import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
-import { Badge, ExternalLink, Package } from "lucide-react";
+import { ExternalLink, Package } from "lucide-react";
 
 export default function OrdersPage() {
   const { data, isLoading } = useQuery({
