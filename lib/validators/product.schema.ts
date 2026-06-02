@@ -37,7 +37,7 @@ export const ProductSchema = z.object({
   stock: z.number().int().nonnegative("Stock cannot be negative"),
   lowStockThreshold: z.number().int().nonnegative().default(5),
   status: z.enum(["active", "draft", "archived"]).default("draft"),
-  specifications: z.record(z.string()).optional(),
+  specifications: z.record(z.string(), z.string()).optional(),
   weight: z.number().nonnegative().optional().nullable(),
   dimensions: z
     .object({

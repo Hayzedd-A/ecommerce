@@ -22,9 +22,7 @@ export async function POST(req: NextRequest) {
     // Update related order
     const order = await Order.findById(payment.orderId);
     if (order) {
-      if (result.status === "paid") {
-        order.status = "paid";
-      } else if (result.status === "failed" || result.status === "expired") {
+      if (result.status === "failed" || result.status === "expired") {
         order.status = "cancelled";
       }
       await order.save();

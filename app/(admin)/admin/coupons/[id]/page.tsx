@@ -114,7 +114,7 @@ export default function AdminCouponDetailPage() {
           <div className="flex items-center justify-end gap-3 pt-4 border-t border-border">
             <Button variant="secondary" onClick={() => router.push('/admin/coupons')}>Back</Button>
             <Button onClick={handleSave} isLoading={isSaving}>Save</Button>
-            <Button onClick={handleDelete} variant="destructive" disabled={(coupon.usedCount || 0) > 0}>Delete</Button>
+            <Button onClick={handleDelete} variant="outline" disabled={(coupon.usedCount || 0) > 0}>Delete</Button>
           </div>
         </div>
       </Card>

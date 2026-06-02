@@ -28,18 +28,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     await dbConnect();
     const guard = await adminGuard(req);
     if (guard) return guard;
-    const { id } = params;
+    const { id } = await params;
     const coupon = await Coupon.findById(id);
     if (!coupon) return NextResponse.json({ success: false, message: "Coupon not found" }, { status: 404 });
     if ((coupon.usedCount || 0) > 0) {
       return NextResponse.json({ success: false, message: "Cannot delete coupon with existing uses" }, { status: 400 });
     }
-    await coupon.remove();
+    await coupon.deleteOne();
     return NextResponse.json({ success: true, message: "Coupon deleted" });
   } catch (error: any) {
     console.error("Admin coupon delete error:", error);
