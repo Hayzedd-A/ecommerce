@@ -41,6 +41,12 @@ export const CheckoutSchema = z
     paymentRef: z.string().optional(),
     total: z.number(),
     subtotal: z.number(),
+    checkoutMethod: z.enum([
+      "pay_on_delivery",
+      "monnify",
+      "paystack",
+      "bank_transfer",
+    ]),
     guestEmail: z.email("Invalid email address").optional().or(z.literal("")),
     guestPhone: z
       .string()

@@ -33,7 +33,7 @@ export default function Navbar() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const { items } = useAppSelector((state) => state.cart);
   const { items: wishlistItems } = useAppSelector((state) => state.wishlist);
-  const { settings } = useStoreSettings();
+  const { storeName } = useStoreSettings();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,7 +67,7 @@ export default function Navbar() {
         {/* Brand Logo */}
         <Link href="/" className="flex items-center gap-2 group">
           <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent group-hover:opacity-85 transition-opacity">
-            {settings?.storeName ?? "STOREFRONT"}
+            {storeName ?? "STOREFRONT"}
           </span>
         </Link>
 

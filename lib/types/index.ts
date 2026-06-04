@@ -109,9 +109,9 @@ export type ICategory = Omit<ICategoryDocument, "_id"> & {
 /* ---------- Order ---------- */
 
 export type OrderStatus =
-  | "pending_payment"
-  | "paid"
+  | "pending"
   | "processing"
+  | "in_progress"
   | "ready_for_pickup"
   | "completed"
   | "cancelled";

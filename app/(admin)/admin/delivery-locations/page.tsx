@@ -8,13 +8,39 @@ import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import apiClient from "@/lib/api/client";
 import { toast } from "react-hot-toast";
+import { Toggle } from "@/components/ui/Toggle";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 export default function AdminDeliveryLocationsPage() {
+  const { pickupEnabled, deliveryEnabled, refetchSettings } =
+    useStoreSettings();
   const [locations, setLocations] = useState<any[]>([]);
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [enablePickup, setEnablePickup] = useState(pickupEnabled);
+  const [enableDelivery, setEnableDelivery] = useState(deliveryEnabled);
+
+  const handlePickupDeliveryChange = async (
+    type: "pickup" | "delivery",
+    value: boolean,
+  ) => {
+    try {
+      type === "pickup" ? setEnablePickup(value) : setEnableDelivery(value);
+      await apiClient.put("/admin/settings", {
+        pickupEnabled: type === "pickup" ? value : enablePickup,
+        deliveryEnabled: type === "delivery" ? value : enableDelivery,
+      });
+      refetchSettings();
+      toast.success(`${type} ${value ? "enabled" : "disabled"}`);
+    } catch (error: any) {
+      toast.error(
+        error?.response?.data?.message ||
+          `Failed to ${type} ${value ? "enable" : "disable"}`,
+      );
+    }
+  };
 
   const fetchLocations = async () => {
     setIsLoading(true);
@@ -84,6 +110,22 @@ export default function AdminDeliveryLocationsPage() {
       </div>
 
       <Card className="p-6" glass>
+        <div className="flex flex-wrap gap-6 mb-3 border-b-2 border-dashed p-4">
+          <Toggle
+            checked={enableDelivery}
+            onChange={(val) => {
+              handlePickupDeliveryChange("delivery", val);
+            }}
+            label="Enable delivery"
+          />
+          <Toggle
+            checked={enablePickup}
+            onChange={(val) => {
+              handlePickupDeliveryChange("pickup", val);
+            }}
+            label="Enable pickup"
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full border-separate border-spacing-y-2">
             <thead>

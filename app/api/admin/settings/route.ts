@@ -31,9 +31,12 @@ export async function PUT(req: NextRequest) {
       "themeColors",
       "deliveryZones",
       "pickupEnabled",
+      "deliveryEnabled",
       "pickupAddress",
       "currency",
       "currencySymbol",
+      "checkoutMethod",
+      "personalAccount",
       "paymentSettings",
     ];
     for (const k of allowed) {

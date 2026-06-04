@@ -28,7 +28,9 @@ export default function AdminOrdersPage() {
   const fetchOrders = async () => {
     setIsLoading(true);
     try {
-      const response = await apiClient.get("/admin/orders", { params: { page, limit: 20, status: statusFilter } });
+      const response = await apiClient.get("/admin/orders", {
+        params: { page, limit: 20, status: statusFilter },
+      });
       setOrders(response.data.data.items || []);
       setTotal(response.data.data.total || 0);
     } catch (error: any) {
@@ -47,7 +49,9 @@ export default function AdminOrdersPage() {
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
           <h1 className="text-3xl font-extrabold text-foreground">Orders</h1>
-          <p className="text-sm text-muted-foreground mt-1">Review order status, totals, and customer order history.</p>
+          <p className="text-sm text-muted-foreground mt-1">
+            Review order status, totals, and customer order history.
+          </p>
         </div>
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] w-full sm:w-auto">
           <select
@@ -61,7 +65,9 @@ export default function AdminOrdersPage() {
               </option>
             ))}
           </select>
-          <Button variant="secondary" onClick={() => fetchOrders()}>Refresh</Button>
+          <Button variant="secondary" onClick={() => fetchOrders()}>
+            Refresh
+          </Button>
         </div>
       </div>
 
@@ -74,6 +80,7 @@ export default function AdminOrdersPage() {
                 <th className="px-4 py-3">Customer</th>
                 <th className="px-4 py-3">Date</th>
                 <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3">Delivery</th>
                 <th className="px-4 py-3">Payment Status</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3">Action</th>
@@ -82,23 +89,54 @@ export default function AdminOrdersPage() {
             <tbody>
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">Loading orders...</td>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    Loading orders...
+                  </td>
                 </tr>
               ) : orders.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No orders found.</td>
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
+                    No orders found.
+                  </td>
                 </tr>
               ) : (
                 orders.map((order) => (
-                  <tr key={order._id} className="bg-surface rounded-3xl shadow-sm">
-                    <td className="px-4 py-4 font-mono text-sm text-foreground">{order.orderNumber}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">{order.shippingAddress?.fullName || "Guest"}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">{formatDate(order.createdAt)}</td>
-                    <td className="px-4 py-4 font-semibold text-foreground">{formatCurrency(order.total)}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">{order.payment?.status || "pending"}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">{order.status.replace(/_/g, " ")}</td>
+                  <tr
+                    key={order._id}
+                    className="bg-surface rounded-3xl shadow-sm"
+                  >
+                    <td className="px-4 py-4 font-mono text-sm text-foreground">
+                      {order.orderNumber}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                      {order.shippingAddress?.fullName || "Guest"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                      {formatDate(order.createdAt)}
+                    </td>
+                    <td className="px-4 py-4 font-semibold text-foreground">
+                      {formatCurrency(order.total)}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
+                      {order.deliveryLocation?.type || "N/A"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
+                      {order.payment?.status || "pending"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
+                      {order.status.replace(/_/g, " ")}
+                    </td>
                     <td className="px-4 py-4 text-right">
-                      <Link href={`/admin/orders/${order._id}`} className="text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline">
+                      <Link
+                        href={`/admin/orders/${order._id}`}
+                        className="text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline"
+                      >
                         View
                       </Link>
                     </td>
@@ -112,9 +150,23 @@ export default function AdminOrdersPage() {
         <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
           <span>{total} orders</span>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>Prev</Button>
-            <span className="px-3 py-2 rounded-xl bg-surface border border-border">Page {page}</span>
-            <Button variant="secondary" onClick={() => setPage((prev) => prev + 1)} disabled={orders.length < 20}>Next</Button>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page <= 1}
+            >
+              Prev
+            </Button>
+            <span className="px-3 py-2 rounded-xl bg-surface border border-border">
+              Page {page}
+            </span>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={orders.length < 20}
+            >
+              Next
+            </Button>
           </div>
         </div>
       </Card>

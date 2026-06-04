@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       guestEmail,
       guestPhone,
       paymentRef,
+      checkoutMethod,
     } = result.data;
 
     // Identify user from cookie if present
@@ -209,7 +210,7 @@ export async function POST(req: NextRequest) {
       reference: paymentReference,
       amount: total,
       status: "pending",
-      provider: "bank_transfer",
+      provider: checkoutMethod,
     });
     order.paymentId = payment._id;
     await order.save({ session });

@@ -11,7 +11,10 @@ export async function GET(req: NextRequest) {
     if (guard) return guard;
     const url = new URL(req.url);
     const page = parseInt(url.searchParams.get("page") || "1", 10);
-    const limit = parseInt(url.searchParams.get("limit") || String(ADMIN_PAGE_SIZE), 10);
+    const limit = parseInt(
+      url.searchParams.get("limit") || String(ADMIN_PAGE_SIZE),
+      10,
+    );
     const status = url.searchParams.get("status");
     const filter: any = {};
     if (status) filter.status = status;
@@ -23,7 +26,7 @@ export async function GET(req: NextRequest) {
       { $limit: limit },
       {
         $lookup: {
-          from: "payments",        // MongoDB collection name
+          from: "payments", // MongoDB collection name
           localField: "_id",
           foreignField: "orderId",
           as: "payment",
@@ -34,14 +37,32 @@ export async function GET(req: NextRequest) {
           payment: { $arrayElemAt: ["$payment", 0] },
         },
       },
+      {
+        $lookup: {
+          from: "deliverylocations",
+          localField: "deliveryLocationId",
+          foreignField: "_id",
+          as: "deliveryLocation",
+        },
+      },
+      {
+        $addFields: {
+          deliveryLocation: { $arrayElemAt: ["$deliveryLocation", 0] },
+        },
+      },
       // {
       //   $unset: "payment",         // remove the full payment array, keep only paymentStatus
       // },
-    ]); 
-    return NextResponse.json({ success: true, data: { items, total, page, limit } });
+    ]);
+    return NextResponse.json({
+      success: true,
+      data: { items, total, page, limit },
+    });
   } catch (error: any) {
     console.error("Admin orders list error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 },
+    );
   }
 }
-

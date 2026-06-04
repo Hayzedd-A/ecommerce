@@ -16,6 +16,7 @@ import {
   XCircle,
   AlertTriangle,
   BanknoteArrowDown,
+  BanknoteArrowUp,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -43,7 +44,7 @@ export default function CheckoutPage() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
 
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
-    "delivery",
+    deliveryEnabled ? "delivery" : "pickup",
   );
   const [deliveryLocations, setDeliveryLocations] = useState<
     IDeliveryLocation[]
@@ -59,7 +60,12 @@ export default function CheckoutPage() {
   const [couponCode, setCouponCode] = useState("");
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState({
+    payOnDelivery: false,
+    verifyCoupon: false,
+    verifyPayment: false,
+    placeOrder: false,
+  });
   const [selectedDeliveryLocation, setSelectedDeliveryLocation] =
     useState<IDeliveryLocation | null>(null);
   const [couponResponse, setCouponResponse] = useState<{
@@ -100,6 +106,110 @@ export default function CheckoutPage() {
       deliveryMethod: "delivery",
     },
   });
+
+  const handleCreateOrder = async ({
+    paymentRef,
+    file,
+    checkoutMethod,
+  }: {
+    paymentRef?: string | null;
+    file?: File | null;
+    checkoutMethod: "bank_transfer" | "pay_on_delivery";
+  }) => {
+    const data = getValues();
+    if (!data || !data.items || data.items.length === 0) {
+      toast.error("Cart is empty");
+      return;
+    }
+    try {
+      // 1. Create order (bank transfer, payment on delivery)
+      const payload = { ...data, paymentRef, checkoutMethod };
+      const createRes = await apiClient.post("/orders", payload);
+      if (!createRes.data?.success) {
+        throw new Error(createRes.data?.message || "Failed to create order");
+      }
+      const orderId = createRes.data.orderId as string;
+
+      // 2. Upload evidence if provided
+      if (file) {
+        const fd = new FormData();
+        fd.append("file", file);
+        const uploadRes = await apiClient.post(
+          `/orders/${orderId}/evidence`,
+          fd,
+          {
+            headers: { "Content-Type": "multipart/form-data" },
+          },
+        );
+        if (!uploadRes.data?.success) {
+          throw new Error(uploadRes.data?.message || "Upload failed");
+        }
+      }
+
+      dispatch(clearCart());
+      return {
+        success: true,
+        message: "Order placed. Awaiting payment verification.",
+        paymentReference: createRes.data?.paymentReference,
+      };
+    } catch (err: any) {
+      console.log(err?.response?.data);
+      return {
+        success: false,
+        message: err?.response?.data?.error || "Failed to place order",
+      };
+    }
+  };
+
+  const handleCompleteBankTransfer = async ({
+    ref,
+    file,
+  }: {
+    ref: string | null;
+    file: File | null;
+  }) => {
+    // dispatch(clearCart());
+    try {
+      if (ref) {
+        const res = await handleCreateOrder({
+          checkoutMethod: "bank_transfer",
+          file,
+          paymentRef: ref,
+        });
+        if (res?.success) {
+          router.push(`/checkout/success?ref=${encodeURIComponent(ref)}`);
+        } else {
+          toast.error(res?.message || "Failed to place order");
+        }
+      }
+    } catch (error) {
+      console.error("Error in handleCompleteBankTransfer:", error);
+      throw error;
+    }
+  };
+
+  const handlePayOnDelivery = async () => {
+    try {
+      setIsLoading((prev) => ({ ...prev, payOnDelivery: true }));
+      const res = await handleCreateOrder({
+        checkoutMethod: "pay_on_delivery",
+      });
+      if (!res?.success) {
+        toast.error(res?.message);
+      } else {
+        router.push(
+          `/checkout/success?ref=${encodeURIComponent(
+            res?.paymentReference || "",
+          )}`,
+        );
+      }
+    } catch (error: any) {
+      console.error("Error in handlePayOnDelivery:", error);
+      toast.error(error?.response?.data?.error || "Failed to place order");
+    } finally {
+      setIsLoading((prev) => ({ ...prev, payOnDelivery: false }));
+    }
+  };
 
   useEffect(() => {
     setValue("items", items);
@@ -441,7 +551,7 @@ export default function CheckoutPage() {
   };
 
   const handlePlaceOrder = async (data: CheckoutInput) => {
-    setIsLoading(true);
+    setIsLoading((prev) => ({ ...prev, placeOrder: true }));
     try {
       const payload = {
         ...data,
@@ -475,7 +585,7 @@ export default function CheckoutPage() {
           "Something went wrong during checkout.",
       );
     } finally {
-      setIsLoading(false);
+      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
     }
   };
 
@@ -686,9 +796,7 @@ export default function CheckoutPage() {
                       ) : (
                         <>
                           <Package className="h-4 w-4 flex-shrink-0" />
-                          <span>
-                            You'll pick up your order from a store near you.
-                          </span>
+                          <span>You'll pick up your order from the store.</span>
                         </>
                       )}
                     </div>
@@ -702,49 +810,51 @@ export default function CheckoutPage() {
                               <strong>{selectedCity}</strong>.
                             </div>
                           ) : ( */}
-                        {deliveryLocations.map((location) => (
-                          <button
-                            key={location._id}
-                            type="button"
-                            onClick={() => {
-                              setSelectedDeliveryLocationId(location._id);
-                              setSelectedDeliveryLocation(location);
-                            }}
-                            className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${
-                              selectedDeliveryLocationId === location._id
-                                ? "border-primary-500 bg-primary-50/10 ring-1 ring-primary-400"
-                                : "border-border bg-surface hover:bg-surface-secondary"
-                            }`}
-                          >
-                            <div className="flex items-center justify-between gap-4">
-                              <div>
-                                <div className="text-sm font-semibold text-foreground">
-                                  {location.name}
+                        {deliveryLocations
+                          .filter((l) => l.type === deliveryMethod)
+                          .map((location) => (
+                            <button
+                              key={location._id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedDeliveryLocationId(location._id);
+                                setSelectedDeliveryLocation(location);
+                              }}
+                              className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${
+                                selectedDeliveryLocationId === location._id
+                                  ? "border-primary-500 bg-primary-50/10 ring-1 ring-primary-400"
+                                  : "border-border bg-surface hover:bg-surface-secondary"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between gap-4">
+                                <div>
+                                  <div className="text-sm font-semibold text-foreground">
+                                    {location.name}
+                                  </div>
+                                  <div className="text-xs text-muted-foreground">
+                                    {[
+                                      location.city,
+                                      location.state,
+                                      location.country,
+                                    ]
+                                      .filter(Boolean)
+                                      .join(", ")}
+                                  </div>
                                 </div>
-                                <div className="text-xs text-muted-foreground">
-                                  {[
-                                    location.city,
-                                    location.state,
-                                    location.country,
-                                  ]
-                                    .filter(Boolean)
-                                    .join(", ")}
-                                </div>
+                                <span className="text-sm font-black text-primary-500 whitespace-nowrap">
+                                  {formatCurrency(location.price)}
+                                </span>
                               </div>
-                              <span className="text-sm font-black text-primary-500 whitespace-nowrap">
-                                {formatCurrency(location.price)}
-                              </span>
-                            </div>
-                            <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
-                              <span>
-                                {location.estimatedDays || "No estimate"}
-                              </span>
-                              {location.address && (
-                                <span>· {location.address}</span>
-                              )}
-                            </div>
-                          </button>
-                        ))}
+                              <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                                <span>
+                                  {location.estimatedDays || "No estimate"}
+                                </span>
+                                {location.address && (
+                                  <span>· {location.address}</span>
+                                )}
+                              </div>
+                            </button>
+                          ))}
                       </div>
                     ) : (
                       <div className="space-y-3">
@@ -888,7 +998,7 @@ export default function CheckoutPage() {
                           type="submit"
                           variant="primary"
                           className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                          isLoading={isLoading}
+                          isLoading={isLoading.placeOrder}
                           leftIcon={<CreditCard className="h-5 w-5" />}
                         >
                           Pay Now {formatCurrency(totalAmount)}
@@ -896,17 +1006,18 @@ export default function CheckoutPage() {
                       )}
                       {checkoutMethod.acceptCashOnDelivery && (
                         <Button
-                          type="submit"
+                          type="button"
                           variant="primary"
                           className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                          isLoading={isLoading}
+                          isLoading={isLoading.payOnDelivery}
                           leftIcon={<CreditCard className="h-5 w-5" />}
+                          onClick={handlePayOnDelivery}
                         >
                           Pay on Delivery {formatCurrency(totalAmount)}
                         </Button>
                       )}
                     </div>
-                    {(true || checkoutMethod.acceptBankTransfer) && (
+                    {checkoutMethod.acceptBankTransfer && (
                       <Button
                         type="button"
                         variant="primary"
@@ -914,7 +1025,7 @@ export default function CheckoutPage() {
                         onClick={() => {
                           setShowBankModal(true);
                         }}
-                        leftIcon={<BanknoteArrowDown className="h-5 w-5" />}
+                        leftIcon={<BanknoteArrowUp className="h-5 w-5" />}
                       >
                         Pay via Bank Transfer {formatCurrency(totalAmount)}
                       </Button>
@@ -947,27 +1058,6 @@ export default function CheckoutPage() {
                       </Button>
                     )}
                   </>
-                  {checkoutMethod.acceptCashOnDelivery && (
-                    <>
-                      <Button
-                        type="submit"
-                        variant="primary"
-                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                        isLoading={isLoading}
-                        leftIcon={<CreditCard className="h-5 w-5" />}
-                      >
-                        Pay Now {formatCurrency(totalAmount)}
-                      </Button>
-                      {/* <div className="flex items-start gap-3 p-3 bg-surface-secondary border border-border rounded-xl text-xs text-muted-foreground">
-                        <Shield className="h-4 w-4 mt-0.5 text-primary-500 flex-shrink-0" />
-                        <span>
-                          Your payment will be secured and processed via our
-                          secure payment gateway. Your financial data is
-                          encrypted and completely private.
-                        </span>
-                      </div> */}
-                    </>
-                  )}
                 </div>
               </form>
             </Card>
@@ -1087,10 +1177,7 @@ export default function CheckoutPage() {
           onClose={() => setShowBankModal(false)}
           data={getValues()}
           total={totalAmount}
-          onCompleted={(orderId: string) => {
-            dispatch(clearCart());
-            router.push(`/checkout/success?ref=${encodeURIComponent(orderId)}`);
-          }}
+          onCompleted={handleCompleteBankTransfer}
         />
       </div>
     </>

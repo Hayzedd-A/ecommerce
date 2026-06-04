@@ -102,9 +102,11 @@ export function formatFileSize(bytes: number): string {
  */
 export function formatOrderStatus(status: string): string {
   const statusMap: Record<string, string> = {
+    pending: "Pending",
     pending_payment: "Pending Payment",
     paid: "Paid",
     processing: "Processing",
+    in_progress: "In Progress",
     ready_for_pickup: "Ready for Pickup",
     completed: "Completed",
     cancelled: "Cancelled",
@@ -117,9 +119,11 @@ export function formatOrderStatus(status: string): string {
  */
 export function getStatusColor(status: string): string {
   const colorMap: Record<string, string> = {
+    pending: "text-warning-600 bg-warning-50",
     pending_payment: "text-warning-600 bg-warning-50",
     paid: "text-primary-600 bg-primary-50",
     processing: "text-accent-600 bg-accent-50",
+    in_progress: "text-accent-600 bg-accent-50",
     ready_for_pickup: "text-primary-700 bg-primary-100",
     completed: "text-success-600 bg-success-50",
     cancelled: "text-error-600 bg-error-50",
