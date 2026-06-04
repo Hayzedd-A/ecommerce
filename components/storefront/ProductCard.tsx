@@ -50,7 +50,7 @@ export default function ProductCard({ product }: ProductCardProps) {
         quantity: 1,
         image: primaryImage,
         stock: product.stock,
-      })
+      }),
     );
     toast.success(`${product.name} added to cart!`);
   };
@@ -65,12 +65,19 @@ export default function ProductCard({ product }: ProductCardProps) {
     }
   };
 
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount =
+    product.discountPrice && product.discountPrice < product.price;
 
   return (
-    <Card hoverable className="group flex flex-col h-full overflow-hidden border border-border bg-surface">
+    <Card
+      hoverable
+      className="group flex flex-col h-full overflow-hidden border border-border bg-surface"
+    >
       {/* Product Image and badges */}
-      <Link href={`/products/${product.slug}`} className="relative block aspect-square w-full overflow-hidden bg-white">
+      <Link
+        href={`/products/${product.slug}`}
+        className="relative block aspect-square w-full overflow-hidden bg-white"
+      >
         {/* Gradients */}
         <div className="absolute inset-0 bg-gradient-to-t from-black/5 to-transparent z-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
@@ -95,7 +102,7 @@ export default function ProductCard({ product }: ProductCardProps) {
             "absolute top-3 right-3 z-10 p-2 rounded-full shadow-soft transition-all duration-200 cursor-pointer active:scale-90",
             isWishlisted
               ? "bg-accent-50 hover:bg-accent-100 text-accent-500"
-              : "bg-surface/80 hover:bg-surface text-muted-foreground hover:text-foreground"
+              : "bg-surface/80 hover:bg-surface text-muted-foreground hover:text-foreground",
           )}
           title={isWishlisted ? "Remove from Wishlist" : "Add to Wishlist"}
         >
@@ -113,7 +120,11 @@ export default function ProductCard({ product }: ProductCardProps) {
         {/* Discount badge */}
         {hasDiscount && (
           <span className="absolute bottom-3 left-3 z-10 bg-accent-500 text-white text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-md shadow-sm">
-            Save {Math.round(((product.price - product.discountPrice!) / product.price) * 100)}%
+            Save{" "}
+            {Math.round(
+              ((product.price - product.discountPrice!) / product.price) * 100,
+            )}
+            %
           </span>
         )}
 
@@ -159,7 +170,7 @@ export default function ProductCard({ product }: ProductCardProps) {
           <div className="flex flex-col">
             {hasDiscount ? (
               <>
-                <span className="text-xs text-muted-line-through">
+                <span className="text-xs text-muted line-through">
                   {formatCurrency(product.price)}
                 </span>
                 <span className="text-base font-bold text-foreground">
@@ -180,7 +191,7 @@ export default function ProductCard({ product }: ProductCardProps) {
               "p-2.5 rounded-lg transition-all duration-200 shadow-soft cursor-pointer active:scale-95",
               product.stock < 1
                 ? "bg-surface-secondary text-muted cursor-not-allowed"
-                : "bg-primary-500 hover:bg-primary-600 text-white hover:shadow-card"
+                : "bg-primary-500 hover:bg-primary-600 text-white hover:shadow-card",
             )}
             title="Add to Cart"
           >
@@ -198,7 +209,10 @@ function StarRating({ rating = 5 }: { rating?: number }) {
       {Array.from({ length: 5 }).map((_, i) => (
         <Star
           key={i}
-          className={cn("h-3 w-3", i < Math.floor(rating) ? "fill-current" : "opacity-30")}
+          className={cn(
+            "h-3 w-3",
+            i < Math.floor(rating) ? "fill-current" : "opacity-30",
+          )}
         />
       ))}
     </div>

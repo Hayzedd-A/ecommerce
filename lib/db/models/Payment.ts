@@ -6,10 +6,17 @@ export interface IPaymentDocument extends Document {
   reference: string;
   provider: string;
   amount: number;
-  status: "initialized" | "pending" | "paid" | "failed" | "expired" | "reversed";
+  status:
+    | "initialized"
+    | "pending"
+    | "paid"
+    | "failed"
+    | "expired"
+    | "reversed";
   metadata?: Record<string, unknown>;
   webhookVerified: boolean;
   providerReference?: string;
+  evidenceFile: string;
   paidAt?: Date;
   createdAt: Date;
   updatedAt: Date;
@@ -46,6 +53,10 @@ const PaymentSchema = new Schema<IPaymentDocument>(
       enum: ["initialized", "pending", "paid", "failed", "expired", "reversed"],
       default: "initialized",
     },
+    evidenceFile: {
+      type: String, // cloudinary public link
+      default: "",
+    },
     metadata: {
       type: Schema.Types.Mixed,
     },
@@ -58,7 +69,7 @@ const PaymentSchema = new Schema<IPaymentDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /* Indexes */
@@ -66,7 +77,8 @@ PaymentSchema.index({ reference: 1 }, { unique: true });
 PaymentSchema.index({ orderId: 1 });
 PaymentSchema.index({ status: 1, createdAt: -1 });
 
-const Payment =  (mongoose.models.Payment as mongoose.Model<IPaymentDocument>) ||
+const Payment =
+  (mongoose.models.Payment as mongoose.Model<IPaymentDocument>) ||
   mongoose.model<IPaymentDocument>("Payment", PaymentSchema);
 
 export default Payment;

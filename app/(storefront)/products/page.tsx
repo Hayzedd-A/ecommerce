@@ -94,8 +94,8 @@ async function getProductsData(search?: string, categorySlug?: string, sort?: st
     const categories = await Category.find({ isActive: true }).sort({ order: 1 }).lean();
 
     return {
-      products: products.length > 0 ? JSON.parse(JSON.stringify(products)) : MOCK_PRODUCTS,
-      categories: JSON.parse(JSON.stringify(categories)),
+      products: products,
+      categories: categories,
     };
   } catch (error) {
     console.error("Error loading products list:", error);

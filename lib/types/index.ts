@@ -2,6 +2,13 @@
 /*  Shared TypeScript types                        */
 /* ============================================== */
 
+import { ICategoryDocument } from "../db/models/Category";
+import { ICouponDocument } from "../db/models/Coupon";
+import { IDeliveryLocationDocument } from "../db/models/DeliveryLocation";
+import { IProductDocument } from "../db/models/Product";
+import { IProductVariantDocument } from "../db/models/ProductVariant";
+import { IStoreSettingsDocument } from "../db/models/StoreSettings";
+
 export interface ApiResponse<T = unknown> {
   success: boolean;
   message: string;
@@ -80,61 +87,24 @@ export interface IProductDimensions {
   unit: "cm" | "in";
 }
 
-export interface IProduct {
+export type IProduct = Omit<IProductDocument, "_id"> & {
   _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  shortDescription?: string;
-  price: number;
-  discountPrice?: number;
-  sku: string;
-  images: IProductImage[];
-  category: string | ICategory;
-  subcategory?: string | ICategory;
-  tags: string[];
-  isFeatured: boolean;
-  isSponsored: boolean;
-  stock: number;
-  lowStockThreshold: number;
-  status: ProductStatus;
-  seoMeta?: ISeoMeta;
-  specifications?: IProductSpecs;
-  weight?: number;
-  dimensions?: IProductDimensions;
-  avgRating: number;
-  reviewCount: number;
-  createdAt: string;
-  updatedAt: string;
-}
+  variants?: IProductVariant[];
+  category: ICategoryDocument;
+};
 
-export interface IProductVariant {
+export type IProductVariant = Omit<IProductVariantDocument, "_id"> & {
   _id: string;
-  productId: string | IProduct;
-  type: VariantType;
-  value: string;
-  label?: string;
-  price?: number;
-  stock: number;
   images: IProductImage[];
-  isActive: boolean;
-}
+};
 
 /* ---------- Category ---------- */
 
-export interface ICategory {
+export type ICategory = Omit<ICategoryDocument, "_id"> & {
   _id: string;
-  name: string;
-  slug: string;
-  description?: string;
-  image?: IProductImage;
-  parent?: string | ICategory;
-  isActive: boolean;
-  order: number;
+  image: IProductImage;
   children?: ICategory[];
-  createdAt: string;
-  updatedAt: string;
-}
+};
 
 /* ---------- Order ---------- */
 
@@ -220,19 +190,15 @@ export interface IReview {
 
 export type CouponType = "percentage" | "fixed";
 
-export interface ICoupon {
+export type ICoupon = Omit<
+  Omit<ICouponDocument, "_id">,
+  "startsAt" | "expiresAt" | "orders"
+> & {
   _id: string;
-  code: string;
-  type: CouponType;
-  value: number;
-  minPurchase?: number;
-  maxUses?: number;
-  usedCount: number;
+  startsAt?: string;
   expiresAt?: string;
-  isActive: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
+  orders: IOrder[];
+};
 
 /* ---------- Banner ---------- */
 
@@ -321,39 +287,9 @@ export interface IThemeColors {
   accent?: string;
 }
 
-export interface IStoreSettings {
+export type IStoreSettings = Omit<IStoreSettingsDocument, "_id"> & {
   _id: string;
-  storeName: string;
-  logo?: IProductImage;
-  favicon?: string;
-  description?: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  socialLinks?: ISocialLinks;
-  businessHours?: IBusinessHours[];
-  seoMeta?: ISeoMeta;
-  themeColors?: IThemeColors;
-  deliveryZones: IDeliveryZone[];
-  pickupEnabled: boolean;
-  pickupAddress?: string;
-  currency: string;
-  currencySymbol: string;
-  paymentSettings: {
-    activeProvider: "monnify" | "paystack";
-    monnify?: {
-      apiKey: string;
-      secretKey: string;
-      contractCode: string;
-      baseUrl: string;
-    };
-    paystack?: {
-      secretKey: string;
-      publicKey: string;
-    };
-  };
-  updatedAt: string;
-}
+};
 
 /* ---------- Cart (client-side) ---------- */
 
@@ -376,3 +312,9 @@ export interface ICartState {
   couponCode?: string;
   total: number;
 }
+
+/* --------------- Delivery location (client-side)------------------- */
+
+export type IDeliveryLocation = Omit<IDeliveryLocationDocument, "_id"> & {
+  _id: string;
+};

@@ -64,8 +64,8 @@ export async function POST(req: NextRequest) {
     if (
       !body.type ||
       !body.country ||
-      !body.state ||
-      !body.city ||
+      // !body.state ||
+      // !body.city ||
       body.price == null
     ) {
       return NextResponse.json(

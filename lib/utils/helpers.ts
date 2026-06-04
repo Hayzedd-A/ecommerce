@@ -3,6 +3,7 @@
 /* ============================================== */
 
 import { clsx, type ClassValue } from "clsx";
+import { Payment } from "../db/models";
 
 /**
  * Merge Tailwind classes with clsx.
@@ -36,15 +37,6 @@ export function generateOrderNumber(): string {
   const dateStr = date.toISOString().slice(0, 10).replace(/-/g, "");
   const random = Math.random().toString(36).substring(2, 7).toUpperCase();
   return `ORD-${dateStr}-${random}`;
-}
-
-/**
- * Generate a unique payment reference.
- */
-export function generatePaymentReference(): string {
-  const timestamp = Date.now().toString(36);
-  const random = Math.random().toString(36).substring(2, 8);
-  return `PAY-${timestamp}-${random}`.toUpperCase();
 }
 
 /**
@@ -97,17 +89,29 @@ export function buildQueryString(params: Record<string, unknown>): string {
 /**
  * Calculate discount percentage.
  */
-export function calcDiscountPercent(original: number, discounted: number): number {
+export function calcDiscountPercent(
+  original: number,
+  discounted: number,
+): number {
   if (original <= 0) return 0;
   return Math.round(((original - discounted) / original) * 100);
 }
 
 /**
  * Debounce a function call.
+ *
+ * @template T - The type of the function to debounce.
+ * @param {T} fn - The function to debounce.
+ * @param {number} delay - The delay in milliseconds to wait before calling the function.
+ * @returns {(...args: Parameters<T>) => void} The debounced function.
+ *
+ * @example
+ * const debouncedFetchProducts = debounce(fetchProducts, 500);
+ * debouncedFetchProducts();
  */
 export function debounce<T extends (...args: unknown[]) => unknown>(
   fn: T,
-  delay: number
+  delay: number,
 ): (...args: Parameters<T>) => void {
   let timer: ReturnType<typeof setTimeout>;
   return (...args: Parameters<T>) => {

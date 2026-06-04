@@ -5,10 +5,10 @@ export const AddressSchema = z.object({
   phone: z
     .string()
     .regex(/^[0-9+]{11,14}$/, "Please provide a valid phone number"),
-  street: z.string().min(5, "Street address must be at least 5 characters"),
-  city: z.string().min(2, "City is required"),
-  state: z.string().min(2, "State is required"),
-  country: z.string().optional(),
+  street: z.string().optional().or(z.literal("")),
+  city: z.string().optional().or(z.literal("")),
+  state: z.string().optional().or(z.literal("")),
+  country: z.string().optional().or(z.literal("")),
   zipCode: z.string().optional().or(z.literal("")),
   isDefault: z.boolean().optional(),
 });
@@ -38,6 +38,7 @@ export const CheckoutSchema = z
     deliveryMethod: z.enum(["delivery", "pickup"]),
     deliveryLocationId: z.string().optional().or(z.literal("")),
     discount: z.number().optional(),
+    paymentRef: z.string().optional(),
     total: z.number(),
     subtotal: z.number(),
     guestEmail: z.email("Invalid email address").optional().or(z.literal("")),

@@ -2,6 +2,7 @@ import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IProductVariantDocument extends Document {
   productId: mongoose.Types.ObjectId;
+  parentVariantId?: mongoose.Types.ObjectId; // Reference to parent variant for nested variants
   attributes: Map<string, string>; // e.g. { "size": "45", "color": "red" }
   attributeKey: string; // normalized string of attributes for unique constraint e.g. "color:red|size:45"
   price?: number;
@@ -14,6 +15,7 @@ export interface IProductVariantDocument extends Document {
     order: number;
   }[];
   isActive: boolean;
+  level: number; // Nesting level (0 = root variant, 1+ = nested variants)
   createdAt: Date;
   updatedAt: Date;
 }
@@ -35,6 +37,12 @@ const ProductVariantSchema = new Schema<IProductVariantDocument>(
       ref: "Product",
       required: true,
       index: true,
+    },
+    parentVariantId: {
+      type: Schema.Types.ObjectId,
+      ref: "ProductVariant",
+      default: null,
+      sparse: true,
     },
     attributes: {
       type: Map,
@@ -65,15 +73,20 @@ const ProductVariantSchema = new Schema<IProductVariantDocument>(
       type: Boolean,
       default: true,
     },
+    level: {
+      type: Number,
+      default: 0,
+      min: 0,
+    },
   },
   {
     timestamps: true,
   }
 );
 
-/* Compound unique index: productId + attributeKey */
+/* Compound unique index: productId + attributeKey + parentVariantId */
 ProductVariantSchema.index(
-  { productId: 1, attributeKey: 1 },
+  { productId: 1, attributeKey: 1, parentVariantId: 1 },
   { unique: true }
 );
 

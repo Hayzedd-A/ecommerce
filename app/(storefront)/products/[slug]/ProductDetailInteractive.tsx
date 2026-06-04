@@ -1,7 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import { ShoppingCart, Heart, ShieldCheck, Truck, RefreshCw, Star } from "lucide-react";
+import {
+  ShoppingCart,
+  Heart,
+  ShieldCheck,
+  Truck,
+  RefreshCw,
+  Star,
+} from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
@@ -32,6 +39,7 @@ export default function ProductDetailInteractive({
   product,
   variants = [],
 }: ProductDetailInteractiveProps) {
+  console.log(variants);
   const dispatch = useAppDispatch();
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
 
@@ -94,7 +102,7 @@ export default function ProductDetailInteractive({
         variantLabel: variantLabel,
       }),
     );
-    toast.success(`${product.name} (${quantity} items) added to cart!`);
+    // toast.success(`${product.name} (${quantity} items) added to cart!`);
   };
 
   const handleWishlistToggle = () => {
@@ -106,7 +114,8 @@ export default function ProductDetailInteractive({
     }
   };
 
-  const hasDiscount = product.discountPrice && product.discountPrice < product.price;
+  const hasDiscount =
+    product.discountPrice && product.discountPrice < product.price;
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
@@ -116,9 +125,15 @@ export default function ProductDetailInteractive({
         <div className="aspect-square w-full rounded-2xl overflow-hidden border border-border bg-white flex items-center justify-center relative shadow-soft">
           {activeImage ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={activeImage} alt={product.name} className="h-full w-full object-cover" />
+            <img
+              src={activeImage}
+              alt={product.name}
+              className="h-full w-full object-cover"
+            />
           ) : (
-            <span className="text-muted-foreground text-sm font-semibold">No Image</span>
+            <span className="text-muted-foreground text-sm font-semibold">
+              No Image
+            </span>
           )}
           {hasDiscount && (
             <span className="absolute top-4 left-4 bg-accent-500 text-white text-xs font-extrabold uppercase px-3 py-1 rounded-full shadow-md z-1">
@@ -136,11 +151,17 @@ export default function ProductDetailInteractive({
                 onClick={() => setActiveImage(img.url)}
                 className={cn(
                   "h-20 w-20 rounded-xl overflow-hidden border bg-white flex-shrink-0 relative transition-all cursor-pointer",
-                  activeImage === img.url ? "border-primary-500 ring-2 ring-primary-100" : "border-border hover:border-border-hover"
+                  activeImage === img.url
+                    ? "border-primary-500 ring-2 ring-primary-100"
+                    : "border-border hover:border-border-hover",
                 )}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={img.url} alt={img.alt || product.name} className="h-full w-full object-cover" />
+                <img
+                  src={img.url}
+                  alt={img.alt || product.name}
+                  className="h-full w-full object-cover"
+                />
               </button>
             ))}
           </div>
@@ -166,8 +187,15 @@ export default function ProductDetailInteractive({
               </span>
             </div>
             <span className="text-muted">•</span>
-            <span className={cn("text-xs font-bold uppercase tracking-wider", product.stock > 0 ? "text-success-600" : "text-error-600")}>
-              {product.stock > 0 ? `In Stock (${product.stock} units)` : "Out of Stock"}
+            <span
+              className={cn(
+                "text-xs font-bold uppercase tracking-wider",
+                product.stock > 0 ? "text-success-600" : "text-error-600",
+              )}
+            >
+              {product.stock > 0
+                ? `In Stock (${product.stock} units)`
+                : "Out of Stock"}
             </span>
           </div>
         </div>
@@ -178,7 +206,7 @@ export default function ProductDetailInteractive({
             {formatCurrency(currentPrice)}
           </span>
           {selectedVariant?.price === undefined && hasDiscount && (
-            <span className="text-sm text-muted-line-through">
+            <span className="text-sm text-muted line-through">
               {formatCurrency(product.price)}
             </span>
           )}
@@ -186,7 +214,9 @@ export default function ProductDetailInteractive({
 
         {/* Description */}
         <div className="space-y-2">
-          <h3 className="font-bold text-sm uppercase tracking-wider text-foreground">Overview</h3>
+          <h3 className="font-bold text-sm uppercase tracking-wider text-foreground">
+            Overview
+          </h3>
           <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-line">
             {product.description}
           </p>
@@ -194,6 +224,7 @@ export default function ProductDetailInteractive({
 
         {/* Dynamic Variant Selectors */}
         {attributeNames.map((attrName) => {
+          console.log(attributeNames);
           const values = Array.from(
             new Set(variants.map((v) => v.attributes[attrName])),
           ).filter(Boolean);
@@ -271,7 +302,7 @@ export default function ProductDetailInteractive({
               "h-12 w-12 rounded-xl border flex items-center justify-center transition-all cursor-pointer active:scale-95",
               isWishlisted
                 ? "bg-accent-50 border-accent-100 text-accent-500"
-                : "border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-secondary"
+                : "border-border bg-surface text-muted-foreground hover:text-foreground hover:bg-surface-secondary",
             )}
             title="Wishlist"
           >

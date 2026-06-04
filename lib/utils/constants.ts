@@ -7,8 +7,8 @@ export const DEFAULT_PAGE_SIZE = 12;
 export const ADMIN_PAGE_SIZE = 20;
 
 /** JWT configuration */
-export const JWT_ACCESS_EXPIRY = process.env.JWT_ACCESS_EXPIRY || "15m";
-export const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY || "7d";
+export const JWT_ACCESS_EXPIRY = process.env.JWT_ACCESS_EXPIRY! || "6m";
+export const JWT_REFRESH_EXPIRY = process.env.JWT_REFRESH_EXPIRY! || "1y";
 
 /** Cookie names */
 export const COOKIE_ACCESS_TOKEN = "access_token";

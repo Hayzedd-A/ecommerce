@@ -15,6 +15,7 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
+  BanknoteArrowDown,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
@@ -26,11 +27,17 @@ import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 import apiClient from "@/lib/api/client";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
+import BankTransferModal from "@/components/storefront/BankTransferModal";
+import { IDeliveryLocationDocument } from "@/lib/db/models/DeliveryLocation";
+import { IDeliveryLocation } from "@/lib/types";
+import { SocialIcon } from "react-social-icons";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useAppDispatch();
+  const { deliveryEnabled, pickupEnabled, checkoutMethod } = useStoreSettings();
 
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
@@ -38,7 +45,9 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<"delivery" | "pickup">(
     "delivery",
   );
-  const [deliveryLocations, setDeliveryLocations] = useState<any[]>([]);
+  const [deliveryLocations, setDeliveryLocations] = useState<
+    IDeliveryLocation[]
+  >([]);
   const [selectedDeliveryLocationId, setSelectedDeliveryLocationId] =
     useState<string>("");
 
@@ -51,22 +60,27 @@ export default function CheckoutPage() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isVerifyingCoupon, setIsVerifyingCoupon] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [selectedDeliveryLocation, setSelectedDeliveryLocation] =
+    useState<IDeliveryLocation | null>(null);
   const [couponResponse, setCouponResponse] = useState<{
     message: string;
     status: "success" | "error";
   }>({ message: "", status: "success" });
 
-  const [verificationReference, setVerificationReference] = useState<string>("");
+  const [verificationReference, setVerificationReference] =
+    useState<string>("");
   const [verificationStatus, setVerificationStatus] = useState<
     "idle" | "pending" | "paid" | "failed" | "timeout"
   >("idle");
   const [verificationMessage, setVerificationMessage] = useState("");
   const [showVerificationModal, setShowVerificationModal] = useState(false);
+  const [showBankModal, setShowBankModal] = useState(false);
 
   const {
     register,
     handleSubmit,
     setValue,
+    getValues,
     formState: { errors },
   } = useForm<CheckoutInput>({
     resolver: zodResolver(CheckoutSchema),
@@ -151,9 +165,11 @@ export default function CheckoutPage() {
           setVerificationStatus("paid");
           setVerificationMessage("Payment verified. Redirecting...");
           window.setTimeout(() => {
-            router.push(`/checkout/success?ref=${encodeURIComponent(
-              verificationReference,
-            )}`);
+            router.push(
+              `/checkout/success?ref=${encodeURIComponent(
+                verificationReference,
+              )}`,
+            );
           }, 250);
           return;
         }
@@ -187,7 +203,7 @@ export default function CheckoutPage() {
       } catch (error: any) {
         setVerificationMessage(
           error.response?.data?.message ||
-          "Unable to verify payment at the moment.",
+            "Unable to verify payment at the moment.",
         );
 
         if (attempts >= 5) {
@@ -297,13 +313,22 @@ export default function CheckoutPage() {
       );
       if (location) {
         setSelectedDeliveryLocationId(location._id);
+        setSelectedDeliveryLocation(location);
+        setValue("deliveryLocationId", location._id);
+      }
+    } else if (selectedState && locationsForCity.length === 0) {
+      const location = filteredByMethod.find(
+        (loc) => loc.state === selectedState,
+      );
+      if (location) {
+        setSelectedDeliveryLocationId(location._id);
+        setSelectedDeliveryLocation(location);
         setValue("deliveryLocationId", location._id);
       }
     } else {
       setSelectedDeliveryLocationId("");
     }
-  }, [selectedCity]);
-
+  }, [selectedCity, selectedState]);
 
   if (showVerificationModal) {
     return (
@@ -329,7 +354,10 @@ export default function CheckoutPage() {
 
           <div className="mt-5 space-y-4 text-sm text-muted-foreground">
             <p>
-              Reference: <span className="font-mono text-foreground">{verificationReference}</span>
+              Reference:{" "}
+              <span className="font-mono text-foreground">
+                {verificationReference}
+              </span>
             </p>
             <p>{verificationMessage}</p>
             {verificationStatus === "pending" && (
@@ -340,10 +368,8 @@ export default function CheckoutPage() {
           </div>
         </div>
       </div>
-
-    )
+    );
   }
-
 
   if (items.length === 0) {
     return (
@@ -374,14 +400,14 @@ export default function CheckoutPage() {
     setCouponResponse({ message: "", status: "success" });
   };
 
-  const selectedDeliveryLocation =
-    locationsForCity.find((loc) => loc._id === selectedDeliveryLocationId) ||
-    locationsForCity[0] ||
-    null;
-  const selectedDeliveryFee = selectedDeliveryLocation?.price ?? 0;
-  const selectedDeliveryLabel = selectedDeliveryLocation
-    ? `${selectedDeliveryLocation.name} — ${selectedDeliveryLocation.city}, ${selectedDeliveryLocation.state}`
-    : "No location selected";
+  // const selectedDeliveryLocation =
+  //   locationsForCity.find((loc) => loc._id === selectedDeliveryLocationId) ||
+  //   locationsForCity[0] ||
+  //   null;
+  // const selectedDeliveryFee = selectedDeliveryLocation?.price ?? 0;
+  // const selectedDeliveryLabel = selectedDeliveryLocation
+  //   ? `${selectedDeliveryLocation.name} — ${selectedDeliveryLocation.city}, ${selectedDeliveryLocation.state}`
+  //   : "No location selected";
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim()) return;
@@ -421,10 +447,11 @@ export default function CheckoutPage() {
         ...data,
         deliveryMethod,
         deliveryLocationId: selectedDeliveryLocation?._id,
-        deliveryFee: selectedDeliveryFee,
+        deliveryFee: selectedDeliveryLocation?.price,
         discount: couponDiscount,
         couponUsed: couponDiscount > 0 ? couponCode.toUpperCase() : undefined,
-        total: subtotal + selectedDeliveryFee - couponDiscount,
+        total:
+          subtotal + (selectedDeliveryLocation?.price ?? 0) - couponDiscount,
         subtotal,
       };
 
@@ -445,14 +472,15 @@ export default function CheckoutPage() {
     } catch (error: any) {
       toast.error(
         error.response?.data?.message ||
-        "Something went wrong during checkout.",
+          "Something went wrong during checkout.",
       );
     } finally {
       setIsLoading(false);
     }
   };
 
-  const totalAmount = subtotal + selectedDeliveryFee - couponDiscount;
+  const totalAmount =
+    subtotal + (selectedDeliveryLocation?.price ?? 0) - couponDiscount;
   setValue("total", totalAmount);
 
   // ─── Select field shared style ───────────────────────────────────────────────
@@ -475,7 +503,9 @@ export default function CheckoutPage() {
               <form
                 onSubmit={handleSubmit(handlePlaceOrder, (formError) => {
                   console.log("Validation errors:", formError);
-                  toast.error("Please fix the highlighted errors and try again.");
+                  toast.error(
+                    "Please fix the highlighted errors and try again.",
+                  );
                 })}
                 className="space-y-6"
               >
@@ -544,300 +574,400 @@ export default function CheckoutPage() {
                 </div>
 
                 {/* ── Section 2 – Delivery Option ─────────────────────────────── */}
-                <div className="space-y-5 pt-6 border-t border-border/80">
-                  <div className="space-y-1">
-                    <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
-                      2. Select Delivery Option
-                    </h3>
-                    <p className="text-xs text-muted-foreground">
-                      Choose how you want to receive your order.
-                    </p>
-                  </div>
+                {(deliveryEnabled || pickupEnabled) && (
+                  <div className="space-y-5 pt-6 border-t border-border/80">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-bold uppercase tracking-wider text-foreground">
+                        2. Select Delivery Option
+                      </h3>
+                      <p className="text-xs text-muted-foreground">
+                        Choose how you want to receive your order.
+                      </p>
+                    </div>
 
-                  {/* ── Delivery / Pickup Switch ────────────────────────────── */}
-                  <div className="flex items-center gap-4">
-                    {/* Label: Delivery */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setValue("deliveryMethod", "delivery");
-                        setDeliveryMethod("delivery");
-                      }}
-                      className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${deliveryMethod === "delivery"
-                        ? "text-primary-600"
-                        : "text-muted-foreground"
-                        }`}
-                    >
-                      <Truck className="h-4 w-4" />
-                      Delivery
-                    </button>
-
-                    {/* The switch track */}
-                    <button
-                      type="button"
-                      role="switch"
-                      aria-checked={deliveryMethod === "pickup"}
-                      onClick={() => {
-                        setDeliveryMethod((prev) => {
-                          const selected =
-                            prev === "delivery" ? "pickup" : "delivery";
-                          setValue("deliveryMethod", selected);
-                          return selected;
-                        });
-                      }}
-                      className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${deliveryMethod === "pickup"
-                        ? "bg-primary-500"
-                        : "bg-primary-500"
-                        }`}
-                      style={{
-                        background:
-                          deliveryMethod === "pickup"
-                            ? "var(--color-primary-500, #6366f1)"
-                            : "var(--color-primary-500, #6366f1)",
-                      }}
-                    >
-                      {/* Thumb */}
-                      <span
-                        className={`pointer-events-none inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out ${deliveryMethod === "pickup"
-                          ? "translate-x-7"
-                          : "translate-x-0"
+                    {/* ── Delivery / Pickup Switch ────────────────────────────── */}
+                    <div className="flex items-center gap-4">
+                      {/* Label: Delivery */}
+                      {deliveryEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setValue("deliveryMethod", "delivery");
+                            setDeliveryMethod("delivery");
+                          }}
+                          className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
+                            deliveryMethod === "delivery"
+                              ? "text-primary-600"
+                              : "text-muted-foreground"
                           }`}
-                      >
-                        {deliveryMethod === "pickup" ? (
-                          <Package className="h-3 w-3 text-primary-500" />
-                        ) : (
-                          <Truck className="h-3 w-3 text-primary-500" />
-                        )}
-                      </span>
-                    </button>
+                        >
+                          <Truck className="h-4 w-4" />
+                          Delivery
+                        </button>
+                      )}
 
-                    {/* Label: Pickup */}
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDeliveryMethod("pickup");
-                        setValue("deliveryMethod", "pickup");
-                      }}
-                      className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${deliveryMethod === "pickup"
-                        ? "text-primary-600"
-                        : "text-muted-foreground"
-                        }`}
-                    >
-                      <Package className="h-4 w-4" />
-                      Pickup
-                    </button>
-                  </div>
+                      {/* The switch track */}
+                      {deliveryEnabled && pickupEnabled && (
+                        <button
+                          type="button"
+                          role="switch"
+                          aria-checked={deliveryMethod === "pickup"}
+                          onClick={() => {
+                            setDeliveryMethod((prev) => {
+                              const selected =
+                                prev === "delivery" ? "pickup" : "delivery";
+                              setValue("deliveryMethod", selected);
+                              return selected;
+                            });
+                          }}
+                          className={`relative inline-flex h-7 w-14 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-300 ease-in-out focus:outline-none focus:ring-2 focus:ring-primary-500 focus:ring-offset-2 ${
+                            deliveryMethod === "pickup"
+                              ? "bg-primary-500"
+                              : "bg-primary-500"
+                          }`}
+                          style={{
+                            background:
+                              deliveryMethod === "pickup"
+                                ? "var(--color-primary-500, #6366f1)"
+                                : "var(--color-primary-500, #6366f1)",
+                          }}
+                        >
+                          {/* Thumb */}
+                          <span
+                            className={`pointer-events-none inline-flex h-6 w-6 transform items-center justify-center rounded-full bg-white shadow-md ring-0 transition-transform duration-300 ease-in-out ${
+                              deliveryMethod === "pickup"
+                                ? "translate-x-7"
+                                : "translate-x-0"
+                            }`}
+                          >
+                            {deliveryMethod === "pickup" ? (
+                              <Package className="h-3 w-3 text-primary-500" />
+                            ) : (
+                              <Truck className="h-3 w-3 text-primary-500" />
+                            )}
+                          </span>
+                        </button>
+                      )}
+                      {/* Label: Pickup */}
+                      {pickupEnabled && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setDeliveryMethod("pickup");
+                            setValue("deliveryMethod", "pickup");
+                          }}
+                          className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
+                            deliveryMethod === "pickup"
+                              ? "text-primary-600"
+                              : "text-muted-foreground"
+                          }`}
+                        >
+                          <Package className="h-4 w-4" />
+                          Pickup
+                        </button>
+                      )}
+                    </div>
 
-                  {/* Active method pill / description */}
-                  <div
-                    className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium border transition-all ${deliveryMethod === "delivery"
-                      ? "bg-primary-50/60 border-primary-300 text-primary-700"
-                      : "bg-amber-50/60 border-amber-300 text-amber-700"
+                    {/* Active method pill / description */}
+                    <div
+                      className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium border transition-all ${
+                        deliveryMethod === "delivery"
+                          ? "bg-primary-50/60 border-primary-300 text-primary-700"
+                          : "bg-amber-50/60 border-amber-300 text-amber-700"
                       }`}
-                  >
-                    {deliveryMethod === "delivery" ? (
-                      <>
-                        <Truck className="h-4 w-4 flex-shrink-0" />
-                        <span>Your order will be delivered to your address.</span>
-                      </>
+                    >
+                      {deliveryMethod === "delivery" ? (
+                        <>
+                          <Truck className="h-4 w-4 flex-shrink-0" />
+                          <span>
+                            Your order will be delivered to your address.
+                          </span>
+                        </>
+                      ) : (
+                        <>
+                          <Package className="h-4 w-4 flex-shrink-0" />
+                          <span>
+                            You'll pick up your order from a store near you.
+                          </span>
+                        </>
+                      )}
+                    </div>
+
+                    {/* ── Cascading Dropdowns ─────────────────────────────────── */}
+                    {deliveryLocations.length <= 6 ? (
+                      <div className="grid md:grid-cols-2 gap-3 pt-1">
+                        {/* {locationsForCity.length === 0 ? (
+                            <div className="rounded-xl border border-border bg-surface-secondary p-4 text-sm text-muted-foreground">
+                              No {deliveryMethod} locations available for{" "}
+                              <strong>{selectedCity}</strong>.
+                            </div>
+                          ) : ( */}
+                        {deliveryLocations.map((location) => (
+                          <button
+                            key={location._id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDeliveryLocationId(location._id);
+                              setSelectedDeliveryLocation(location);
+                            }}
+                            className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${
+                              selectedDeliveryLocationId === location._id
+                                ? "border-primary-500 bg-primary-50/10 ring-1 ring-primary-400"
+                                : "border-border bg-surface hover:bg-surface-secondary"
+                            }`}
+                          >
+                            <div className="flex items-center justify-between gap-4">
+                              <div>
+                                <div className="text-sm font-semibold text-foreground">
+                                  {location.name}
+                                </div>
+                                <div className="text-xs text-muted-foreground">
+                                  {[
+                                    location.city,
+                                    location.state,
+                                    location.country,
+                                  ]
+                                    .filter(Boolean)
+                                    .join(", ")}
+                                </div>
+                              </div>
+                              <span className="text-sm font-black text-primary-500 whitespace-nowrap">
+                                {formatCurrency(location.price)}
+                              </span>
+                            </div>
+                            <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
+                              <span>
+                                {location.estimatedDays || "No estimate"}
+                              </span>
+                              {location.address && (
+                                <span>· {location.address}</span>
+                              )}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
                     ) : (
-                      <>
-                        <Package className="h-4 w-4 flex-shrink-0" />
-                        <span>
-                          You'll pick up your order from a store near you.
-                        </span>
-                      </>
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                          <MapPin className="h-3.5 w-3.5" />
+                          {deliveryMethod === "delivery"
+                            ? "Delivery Location"
+                            : "Pickup Location"}
+                        </div>
+
+                        {/* Country */}
+                        <div className="space-y-1">
+                          <label className="text-xs font-medium text-muted-foreground">
+                            Country
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={selectedCountry}
+                              onChange={(e) => {
+                                setSelectedCountry(e.target.value);
+                                setSelectedState("");
+                                setSelectedCity("");
+                                setSelectedDeliveryLocationId("");
+                              }}
+                              className={selectClass}
+                              disabled={countries.length === 0}
+                            >
+                              <option value=""> --Select Country -- </option>
+                              {/* <option value={countries[0]}>{countries[0]}</option> */}
+                              {countries.map((c) => (
+                                <option key={c} value={c}>
+                                  {c}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              ▾
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* State */}
+                        <div className="space-y-1">
+                          <label
+                            className={`text-xs font-medium transition-colors ${
+                              selectedCountry
+                                ? "text-muted-foreground"
+                                : "text-muted-foreground/40"
+                            }`}
+                          >
+                            State / Region
+                          </label>
+                          <div className="relative">
+                            <select
+                              value={selectedState}
+                              onChange={(e) => {
+                                setSelectedState(e.target.value);
+                                setSelectedCity("");
+                                setSelectedDeliveryLocationId("");
+                                setValue(
+                                  "shippingAddress.state",
+                                  e.target.value,
+                                );
+                              }}
+                              className={selectClass}
+                              disabled={!selectedCountry || states.length === 0}
+                            >
+                              <option value="">— Select state —</option>
+                              {states.map((s) => (
+                                <option key={s} value={s}>
+                                  {s}
+                                </option>
+                              ))}
+                            </select>
+                            <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                              ▾
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* City */}
+                        {cities.length > 0 && (
+                          <div className="space-y-1">
+                            <label
+                              className={`text-xs font-medium transition-colors ${
+                                selectedState
+                                  ? "text-muted-foreground"
+                                  : "text-muted-foreground/40"
+                              }`}
+                            >
+                              City
+                            </label>
+                            <div className="relative">
+                              <select
+                                value={selectedCity}
+                                onChange={(e) => {
+                                  setSelectedCity(e.target.value);
+                                  setSelectedDeliveryLocationId("");
+                                  setValue(
+                                    "shippingAddress.city",
+                                    e.target.value,
+                                  );
+                                }}
+                                className={selectClass}
+                                disabled={!selectedState || cities.length === 0}
+                              >
+                                <option value="">— Select city —</option>
+                                {cities.map((c) => (
+                                  <option key={c} value={c}>
+                                    {c}
+                                  </option>
+                                ))}
+                              </select>
+                              <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+                                ▾
+                              </span>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Location cards within the chosen city */}
+                      </div>
                     )}
-                  </div>
-
-                  {/* ── Cascading Dropdowns ─────────────────────────────────── */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {deliveryMethod === "delivery"
-                        ? "Delivery Location"
-                        : "Pickup Location"}
-                    </div>
-
-                    {/* Country */}
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground">
-                        Country
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedCountry}
-                          onChange={(e) => {
-                            setSelectedCountry(e.target.value);
-                            setSelectedState("");
-                            setSelectedCity("");
-                            setSelectedDeliveryLocationId("");
-                          }}
-                          className={selectClass}
-                          disabled={countries.length === 0}
-                        >
-                          <option value=""> --Select Country -- </option>
-                          {/* <option value={countries[0]}>{countries[0]}</option> */}
-                          {countries.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          ▾
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* State */}
-                    <div className="space-y-1">
-                      <label
-                        className={`text-xs font-medium transition-colors ${selectedCountry
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground/40"
-                          }`}
-                      >
-                        State / Region
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedState}
-                          onChange={(e) => {
-                            setSelectedState(e.target.value);
-                            setSelectedCity("");
-                            setSelectedDeliveryLocationId("");
-                            setValue("shippingAddress.state", e.target.value);
-                          }}
-                          className={selectClass}
-                          disabled={!selectedCountry || states.length === 0}
-                        >
-                          <option value="">— Select state —</option>
-                          {states.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          ▾
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* City */}
-                    <div className="space-y-1">
-                      <label
-                        className={`text-xs font-medium transition-colors ${selectedState
-                          ? "text-muted-foreground"
-                          : "text-muted-foreground/40"
-                          }`}
-                      >
-                        City
-                      </label>
-                      <div className="relative">
-                        <select
-                          value={selectedCity}
-                          onChange={(e) => {
-                            setSelectedCity(e.target.value);
-                            setSelectedDeliveryLocationId("");
-                            setValue("shippingAddress.city", e.target.value);
-                          }}
-                          className={selectClass}
-                          disabled={!selectedState || cities.length === 0}
-                        >
-                          <option value="">— Select city —</option>
-                          {cities.map((c) => (
-                            <option key={c} value={c}>
-                              {c}
-                            </option>
-                          ))}
-                        </select>
-                        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                          ▾
-                        </span>
-                      </div>
-                    </div>
                     {deliveryMethod === "delivery" && (
                       <Input
-                        label="Street Address"
+                        label="Detailed Address"
                         type="text"
-                        placeholder="No. 12 Commerce Street, Lekki Phase 1"
+                        placeholder="House number, street, landmark, etc."
                         error={errors.shippingAddress?.street?.message}
                         {...register("shippingAddress.street")}
                       />
                     )}
-
-                    {/* Location cards within the chosen city */}
-                    {selectedCity && (
-                      <div className="space-y-2 pt-1">
-                        {locationsForCity.length === 0 ? (
-                          <div className="rounded-xl border border-border bg-surface-secondary p-4 text-sm text-muted-foreground">
-                            No {deliveryMethod} locations available for{" "}
-                            <strong>{selectedCity}</strong>.
-                          </div>
-                        ) : (
-                          locationsForCity.map((location) => (
-                            <button
-                              key={location._id}
-                              type="button"
-                              onClick={() =>
-                                setSelectedDeliveryLocationId(location._id)
-                              }
-                              className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${selectedDeliveryLocationId === location._id
-                                ? "border-primary-500 bg-primary-50/10 ring-1 ring-primary-400"
-                                : "border-border bg-surface hover:bg-surface-secondary"
-                                }`}
-                            >
-                              <div className="flex items-center justify-between gap-4">
-                                <div>
-                                  <div className="text-sm font-semibold text-foreground">
-                                    {location.name}
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {location.city}, {location.state},{" "}
-                                    {location.country}
-                                  </div>
-                                </div>
-                                <span className="text-sm font-black text-primary-500 whitespace-nowrap">
-                                  {formatCurrency(location.price)}
-                                </span>
-                              </div>
-                              <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
-                                <span>
-                                  {location.estimatedDays || "No estimate"}
-                                </span>
-                                {location.address && (
-                                  <span>· {location.address}</span>
-                                )}
-                              </div>
-                            </button>
-                          ))
-                        )}
-                      </div>
-                    )}
                   </div>
-                </div>
-
+                )}
                 {/* Payment & Submit */}
                 <div className="pt-6 border-t border-border/80 space-y-4">
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                    isLoading={isLoading}
-                    leftIcon={<CreditCard className="h-5 w-5" />}
-                  >
-                    Pay Now {formatCurrency(totalAmount)}
-                  </Button>
-                  <div className="flex items-start gap-3 p-3 bg-surface-secondary border border-border rounded-xl text-xs text-muted-foreground">
-                    <Shield className="h-4 w-4 mt-0.5 text-primary-500 flex-shrink-0" />
-                    <span>
-                      Your payment will be secured and processed via our secure
-                      payment gateway. Your financial data is encrypted and
-                      completely private.
-                    </span>
-                  </div>
+                  <>
+                    <div className="flex items-center gap-2">
+                      {checkoutMethod.acceptOnlinePayment && (
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                          isLoading={isLoading}
+                          leftIcon={<CreditCard className="h-5 w-5" />}
+                        >
+                          Pay Now {formatCurrency(totalAmount)}
+                        </Button>
+                      )}
+                      {checkoutMethod.acceptCashOnDelivery && (
+                        <Button
+                          type="submit"
+                          variant="primary"
+                          className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                          isLoading={isLoading}
+                          leftIcon={<CreditCard className="h-5 w-5" />}
+                        >
+                          Pay on Delivery {formatCurrency(totalAmount)}
+                        </Button>
+                      )}
+                    </div>
+                    {(true || checkoutMethod.acceptBankTransfer) && (
+                      <Button
+                        type="button"
+                        variant="primary"
+                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                        onClick={() => {
+                          setShowBankModal(true);
+                        }}
+                        leftIcon={<BanknoteArrowDown className="h-5 w-5" />}
+                      >
+                        Pay via Bank Transfer {formatCurrency(totalAmount)}
+                      </Button>
+                    )}
+                    {/* <div className="flex items-start gap-3 p-3 bg-surface-secondary border border-border rounded-xl text-xs text-muted-foreground">
+                      <Shield className="h-4 w-4 mt-0.5 text-primary-500 flex-shrink-0" />
+                      <span>
+                        Your payment will be secured and processed via our
+                        secure payment gateway. Your financial data is encrypted
+                        and completely private.
+                      </span>
+                    </div> */}
+                    {checkoutMethod.acceptWhatsappOrder && (
+                      <Button
+                        type="button"
+                        variant="green"
+                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                        onClick={() => {}}
+                        leftIcon={
+                          <SocialIcon
+                            network="whatsapp"
+                            fgColor="green"
+                            bgColor="white"
+                            className="h-5 w-5"
+                            style={{ height: 32, width: 32 }}
+                          />
+                        }
+                      >
+                        Send Order to WhatsApp
+                      </Button>
+                    )}
+                  </>
+                  {checkoutMethod.acceptCashOnDelivery && (
+                    <>
+                      <Button
+                        type="submit"
+                        variant="primary"
+                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                        isLoading={isLoading}
+                        leftIcon={<CreditCard className="h-5 w-5" />}
+                      >
+                        Pay Now {formatCurrency(totalAmount)}
+                      </Button>
+                      {/* <div className="flex items-start gap-3 p-3 bg-surface-secondary border border-border rounded-xl text-xs text-muted-foreground">
+                        <Shield className="h-4 w-4 mt-0.5 text-primary-500 flex-shrink-0" />
+                        <span>
+                          Your payment will be secured and processed via our
+                          secure payment gateway. Your financial data is
+                          encrypted and completely private.
+                        </span>
+                      </div> */}
+                    </>
+                  )}
                 </div>
               </form>
             </Card>
@@ -914,10 +1044,11 @@ export default function CheckoutPage() {
                   </Button>
                 </div>
                 <span
-                  className={`text-[10px] ${couponResponse.status === "error"
-                    ? "text-red-500"
-                    : "text-green-500"
-                    } mt-1.5 block`}
+                  className={`text-[10px] ${
+                    couponResponse.status === "error"
+                      ? "text-red-500"
+                      : "text-green-500"
+                  } mt-1.5 block`}
                 >
                   {couponResponse.message}
                 </span>
@@ -932,9 +1063,9 @@ export default function CheckoutPage() {
                 <div className="flex justify-between text-muted-foreground">
                   <span>Delivery Fee </span>
                   <span>
-                    {selectedDeliveryFee === 0
+                    {selectedDeliveryLocation?.price === 0
                       ? "Free"
-                      : formatCurrency(selectedDeliveryFee)}
+                      : formatCurrency(selectedDeliveryLocation?.price || 0)}
                   </span>
                 </div>
                 {couponDiscount > 0 && (
@@ -951,6 +1082,16 @@ export default function CheckoutPage() {
             </Card>
           </div>
         </div>
+        <BankTransferModal
+          open={showBankModal}
+          onClose={() => setShowBankModal(false)}
+          data={getValues()}
+          total={totalAmount}
+          onCompleted={(orderId: string) => {
+            dispatch(clearCart());
+            router.push(`/checkout/success?ref=${encodeURIComponent(orderId)}`);
+          }}
+        />
       </div>
     </>
   );
@@ -979,7 +1120,6 @@ const PaymentVerificationModal: React.FC<{
   };
 
   return (
-
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
       <div className="w-full max-w-md rounded-3xl border border-border bg-background p-6 shadow-2xl">
         <div className="flex items-start justify-between gap-4">
@@ -1002,7 +1142,8 @@ const PaymentVerificationModal: React.FC<{
 
         <div className="mt-5 space-y-4 text-sm text-muted-foreground">
           <p>
-            Reference: <span className="font-mono text-foreground">{reference}</span>
+            Reference:{" "}
+            <span className="font-mono text-foreground">{reference}</span>
           </p>
           <p>{message}</p>
           {status === "pending" && (

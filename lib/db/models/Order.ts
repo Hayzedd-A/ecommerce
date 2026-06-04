@@ -14,13 +14,14 @@ export interface IOrderDocument extends Document {
   shippingAddress: {
     fullName: string;
     phone: string;
-    street: string;
-    city: string;
-    state: string;
+    street?: string;
+    city?: string;
+    state?: string;
     country: string;
     zipCode?: string;
   };
   status:
+    | "initialized"
     | "pending"
     | "processing"
     | "in_progress"
@@ -60,20 +61,20 @@ const OrderItemSchema = new Schema(
     quantity: { type: Number, required: true, min: 1 },
     image: String,
   },
-  { _id: true }
+  { _id: true },
 );
 
 const ShippingAddressSchema = new Schema(
   {
     fullName: { type: String, required: true },
     phone: { type: String, required: true },
-    street: { type: String, required: true },
-    city: { type: String, required: true },
-    state: { type: String, required: true },
+    street: { type: String },
+    city: { type: String },
+    state: { type: String },
     country: { type: String, default: "Nigeria" },
     zipCode: String,
   },
-  { _id: false }
+  { _id: false },
 );
 
 const OrderSchema = new Schema<IOrderDocument>(
@@ -102,6 +103,7 @@ const OrderSchema = new Schema<IOrderDocument>(
     status: {
       type: String,
       enum: [
+        "initialized",
         "pending",
         "processing",
         "in_progress",
@@ -109,7 +111,7 @@ const OrderSchema = new Schema<IOrderDocument>(
         "completed",
         "cancelled",
       ],
-      default: "pending",
+      default: "initialized",
     },
     subtotal: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
@@ -137,7 +139,7 @@ const OrderSchema = new Schema<IOrderDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /* Indexes */
@@ -149,4 +151,4 @@ OrderSchema.index({ createdAt: -1 });
 const Order =
   (mongoose.models.Order as mongoose.Model<IOrderDocument>) ||
   mongoose.model<IOrderDocument>("Order", OrderSchema);
-  export default Order;
+export default Order;

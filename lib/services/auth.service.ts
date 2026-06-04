@@ -1,9 +1,11 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { COOKIE_REFRESH_TOKEN } from "../utils/constants";
+import { COOKIE_REFRESH_TOKEN, JWT_ACCESS_EXPIRY } from "../utils/constants";
 
-const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET || "fallback-access-secret-32-chars-long";
-const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || "fallback-refresh-secret-32-chars-long";
+const ACCESS_SECRET =
+  process.env.JWT_ACCESS_SECRET || "fallback-access-secret-32-chars-long";
+const REFRESH_SECRET =
+  process.env.JWT_REFRESH_SECRET || "fallback-refresh-secret-32-chars-long";
 
 export interface TokenPayload {
   id: string;
@@ -23,7 +25,10 @@ export class AuthService {
   /**
    * Compare a raw password with a hashed password
    */
-  static async comparePassword(password: string, hash: string): Promise<boolean> {
+  static async comparePassword(
+    password: string,
+    hash: string,
+  ): Promise<boolean> {
     return bcrypt.compare(password, hash);
   }
 
@@ -32,7 +37,7 @@ export class AuthService {
    */
   static generateAccessToken(payload: TokenPayload): string {
     return jwt.sign(payload, ACCESS_SECRET, {
-      expiresIn: "15m",
+      expiresIn: "182d",
     });
   }
 
@@ -41,7 +46,7 @@ export class AuthService {
    */
   static generateRefreshToken(payload: TokenPayload): string {
     return jwt.sign(payload, REFRESH_SECRET, {
-      expiresIn: "7d",
+      expiresIn: "360d",
     });
   }
 
@@ -62,8 +67,11 @@ export class AuthService {
   /**
    * Get cookie options for setting access and refresh tokens
    */
-  static getCookieOptions(type: "access" | "refresh", isSecure = process.env.NODE_ENV === "production") {
-    const maxAge = type === "access" ? 15 * 60 : 7 * 24 * 60 * 60; // 15 mins vs 7 days
+  static getCookieOptions(
+    type: "access" | "refresh",
+    isSecure = process.env.NODE_ENV === "production",
+  ) {
+    const maxAge = type === "access" ? 150 * 24 * 3600 : 360 * 24 * 60 * 60; // 150 days vs 360 days
 
     return {
       httpOnly: true,

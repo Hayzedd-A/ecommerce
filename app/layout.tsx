@@ -2,17 +2,13 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import { Toaster } from "react-hot-toast";
 import getStoreSettings from "@/lib/settings.server";
-import { headers } from "next/headers";
-
-const headersList = await headers();
-
-const host = headersList.get("host");
 
 // Providers are composed via the `Providers` component imported below
 
 import "./globals.css";
 // Script import removed; theme initialization handled in ThemeProvider
 import { Providers } from "@/components/providers";
+import { getCurrentHost } from "@/lib/store/utils";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -44,13 +40,19 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // we'll implement host based routing later
+  const host = await getCurrentHost();
   const initialSettings = await getStoreSettings();
-    console.log("🌐 Rendering Providers with host:", host);
+  console.log("🌐 Rendering Providers with host:", host);
 
   return (
-    <html lang="en" data-scroll-behavior="smooth" className={`${inter.variable} h-full`} suppressHydrationWarning>
-      <head>
-      </head>
+    <html
+      lang="en"
+      data-scroll-behavior="smooth"
+      className={`${inter.variable} h-full`}
+      suppressHydrationWarning
+    >
+      <head></head>
       <body className="min-h-full flex flex-col antialiased">
         <Providers initialSettings={initialSettings}>
           {children}

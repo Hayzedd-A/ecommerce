@@ -9,7 +9,10 @@
     "lint": "eslint"
   },
   "dependencies": {
+    "@emotion/react": "^11.14.0",
+    "@emotion/styled": "^11.14.1",
     "@hookform/resolvers": "^5.4.0",
+    "@mui/material": "^9.0.1",
     "@reduxjs/toolkit": "^2.12.0",
     "@tanstack/react-query": "^5.100.14",
     "axios": "^1.16.1",
@@ -30,6 +33,7 @@
     "react-hook-form": "^7.76.1",
     "react-hot-toast": "^2.6.0",
     "react-redux": "^9.3.0",
+    "react-social-icons": "^6.26.0",
     "recharts": "^3.8.1",
     "zod": "^4.4.3"
   },

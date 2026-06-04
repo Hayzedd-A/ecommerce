@@ -25,7 +25,9 @@ export default function AdminDeliveryLocationsPage() {
       setLocations(response.data.data.items || []);
       setTotal(response.data.data.total || 0);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Unable to load delivery locations");
+      toast.error(
+        error?.response?.data?.message || "Unable to load delivery locations",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -43,7 +45,9 @@ export default function AdminDeliveryLocationsPage() {
       setTotal((prev) => Math.max(0, prev - 1));
       toast.success("Delivery location deleted");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to delete delivery location");
+      toast.error(
+        error?.response?.data?.message || "Failed to delete delivery location",
+      );
     }
   };
 
@@ -51,24 +55,31 @@ export default function AdminDeliveryLocationsPage() {
     <div className="space-y-8">
       <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Delivery Locations</h1>
-          <p className="text-sm text-muted-foreground mt-1">Manage supported cities, pickup points, and pricing.</p>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
+            Delivery Locations
+          </h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Manage supported cities, pickup points, and pricing.
+          </p>
         </div>
-        <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
-          <Link href="/admin/delivery-locations/new" className="w-full sm:w-auto">
-            <Button variant="primary" className="w-full sm:w-auto">
-              <Plus className="h-4 w-4" /> Create Location
-            </Button>
-          </Link>
+        <div className="flex flex-col items-center sm:flex-row gap-3 w-full sm:w-auto">
           <div className="w-full sm:w-80">
             <Input
-              label="Search locations"
+              // label="Search locations"
               placeholder="Search by name, city, state or country"
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               leftIcon={<Search className="h-4 w-4" />}
             />
           </div>
+          <Link
+            href="/admin/delivery-locations/new"
+            className="w-full sm:w-auto"
+          >
+            <Button variant="primary" className="w-full sm:w-auto">
+              <Plus className="h-4 w-4" /> Create Location
+            </Button>
+          </Link>
         </div>
       </div>
 
@@ -88,32 +99,58 @@ export default function AdminDeliveryLocationsPage() {
             <tbody className="space-y-3">
               {isLoading ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
                     Loading locations...
                   </td>
                 </tr>
               ) : locations.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  <td
+                    colSpan={6}
+                    className="px-4 py-8 text-center text-sm text-muted-foreground"
+                  >
                     No delivery locations found.
                   </td>
                 </tr>
               ) : (
                 locations.map((location) => (
-                  <tr key={location._id} className="bg-surface rounded-3xl shadow-sm">
-                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">{location.type}</td>
+                  <tr
+                    key={location._id}
+                    className="bg-surface rounded-3xl shadow-sm"
+                  >
+                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
+                      {location.type}
+                    </td>
                     <td className="px-4 py-4 font-semibold text-foreground">
                       <div>{location.name}</div>
                       <div className="text-xs text-muted-foreground">
-                        {location.city}, {location.state}, {location.country}
+                        {[location.city, location.state, location.country]
+                          .filter(Boolean)
+                          .join(", ")}
                       </div>
-                      {location.address && <div className="text-xs text-muted-foreground">{location.address}</div>}
+                      {location.address && (
+                        <div className="text-xs text-muted-foreground">
+                          {location.address}
+                        </div>
+                      )}
                     </td>
-                    <td className="px-4 py-4 text-sm text-foreground">{location.price.toLocaleString()}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">{location.estimatedDays || "—"}</td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">{location.isActive ? "Active" : "Inactive"}</td>
+                    <td className="px-4 py-4 text-sm text-foreground">
+                      {location.price.toLocaleString()}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                      {location.estimatedDays || "—"}
+                    </td>
+                    <td className="px-4 py-4 text-sm text-muted-foreground">
+                      {location.isActive ? "Active" : "Inactive"}
+                    </td>
                     <td className="px-4 py-4 text-right space-x-2">
-                      <Link href={`/admin/delivery-locations/${location._id}`} className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-secondary">
+                      <Link
+                        href={`/admin/delivery-locations/${location._id}`}
+                        className="inline-flex items-center gap-2 rounded-xl border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-surface-secondary"
+                      >
                         <Pencil className="h-4 w-4" /> Edit
                       </Link>
                       <button
@@ -133,11 +170,21 @@ export default function AdminDeliveryLocationsPage() {
         <div className="mt-6 flex items-center justify-between text-sm text-muted-foreground">
           <span>{total} locations</span>
           <div className="flex items-center gap-2">
-            <Button variant="secondary" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((prev) => Math.max(1, prev - 1))}
+              disabled={page <= 1}
+            >
               Prev
             </Button>
-            <span className="px-3 py-2 rounded-xl bg-surface border border-border">Page {page}</span>
-            <Button variant="secondary" onClick={() => setPage((prev) => prev + 1)} disabled={locations.length < 20}>
+            <span className="px-3 py-2 rounded-xl bg-surface border border-border">
+              Page {page}
+            </span>
+            <Button
+              variant="secondary"
+              onClick={() => setPage((prev) => prev + 1)}
+              disabled={locations.length < 20}
+            >
               Next
             </Button>
           </div>

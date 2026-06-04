@@ -2,8 +2,52 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import Coupon from "@/lib/db/models/Coupon";
+import { Order } from "@/lib/db/models";
 
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  try {
+    await dbConnect();
+    const guard = await adminGuard(req);
+    if (guard) return guard;
+    const { id } = await params;
+    const coupon = await Coupon.findById(id);
+    const orders = await Order.find({
+      couponCode: coupon?.code,
+      status: { $nin: ["initialized", "cancelled"] },
+    }).sort({ createdAt: -1 });
+    // .populate({
+    //   path: "user",
+    //   select: "firstName lastName email phone",
+    // })
+    // .populate({
+    //   path: "deliveryLocation",
+    //   select: "fullName address",
+    // });
+    if (!coupon)
+      return NextResponse.json(
+        { success: false, message: "Coupon not found" },
+        { status: 404 },
+      );
+    return NextResponse.json({
+      success: true,
+      data: { ...coupon.toObject(), orders },
+    });
+  } catch (error: any) {
+    console.error("Admin coupon get error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function PUT(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     await dbConnect();
     const guard = await adminGuard(req);
@@ -20,29 +64,49 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     if (body.startsAt) update.startsAt = new Date(body.startsAt);
     if (body.isActive != null) update.isActive = !!body.isActive;
     const updated = await Coupon.findByIdAndUpdate(id, update, { new: true });
-    if (!updated) return NextResponse.json({ success: false, message: "Coupon not found" }, { status: 404 });
+    if (!updated)
+      return NextResponse.json(
+        { success: false, message: "Coupon not found" },
+        { status: 404 },
+      );
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
     console.error("Admin coupon update error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 },
+    );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   try {
     await dbConnect();
     const guard = await adminGuard(req);
     if (guard) return guard;
     const { id } = await params;
     const coupon = await Coupon.findById(id);
-    if (!coupon) return NextResponse.json({ success: false, message: "Coupon not found" }, { status: 404 });
+    if (!coupon)
+      return NextResponse.json(
+        { success: false, message: "Coupon not found" },
+        { status: 404 },
+      );
     if ((coupon.usedCount || 0) > 0) {
-      return NextResponse.json({ success: false, message: "Cannot delete coupon with existing uses" }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: "Cannot delete coupon with existing uses" },
+        { status: 400 },
+      );
     }
     await coupon.deleteOne();
     return NextResponse.json({ success: true, message: "Coupon deleted" });
   } catch (error: any) {
     console.error("Admin coupon delete error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 },
+    );
   }
 }

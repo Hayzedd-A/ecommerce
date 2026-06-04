@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
-import { Wishlist } from "@/lib/db/models";
+import { Product, Wishlist } from "@/lib/db/models";
 import { getIdentity } from "@/lib/auth/getIdentity";
 
 export async function GET(req: NextRequest) {
@@ -14,10 +14,11 @@ export async function GET(req: NextRequest) {
 
     const query = userId ? { userId } : { guestId };
     const items = await Wishlist.find(query).select("productId");
+    const products = await Product.find({ _id: { $in: items.map((i) => i.productId) }, status: "active" }).lean();
 
     return NextResponse.json({
       success: true,
-      data: items.map((i) => i.productId),
+      data: products,
     });
   } catch (error: any) {
     console.error("Wishlist GET error:", error);

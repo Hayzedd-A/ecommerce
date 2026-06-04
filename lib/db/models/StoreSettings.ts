@@ -41,9 +41,23 @@ export interface IStoreSettingsDocument extends Document {
     estimatedDays?: string;
   }[];
   pickupEnabled: boolean;
+  deliveryEnabled: boolean;
   pickupAddress?: string;
   currency: string;
   currencySymbol: string;
+  checkoutMethod: {
+    allowGuestCheckout: boolean;
+    acceptOnlinePayment: boolean;
+    acceptCashOnDelivery: boolean;
+    acceptBankTransfer: boolean;
+    acceptWhatsappOrder: boolean;
+    defaultCheckoutMethod: "online" | "cash" | "bank" | "whatsapp";
+  };
+  personalAccount: {
+    bankName: string;
+    accountNumber: string;
+    accountName: string;
+  };
   paymentSettings: {
     activeProvider: "monnify" | "paystack";
     monnify?: {
@@ -113,6 +127,10 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       type: Boolean,
       default: false,
     },
+    deliveryEnabled: {
+      type: Boolean,
+      default: true,
+    },
     pickupAddress: String,
     currency: {
       type: String,
@@ -121,6 +139,38 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
     currencySymbol: {
       type: String,
       default: "₦",
+    },
+    checkoutMethod: {
+      allowGuestCheckout: {
+        type: Boolean,
+        default: true,
+      },
+      acceptOnlinePayment: {
+        type: Boolean,
+        default: false,
+      },
+      acceptCashOnDelivery: {
+        type: Boolean,
+        default: false,
+      },
+      acceptBankTransfer: {
+        type: Boolean,
+        default: false,
+      },
+      acceptWhatsappOrder: {
+        type: Boolean,
+        default: true,
+      },
+      defaultCheckoutMethod: {
+        type: String,
+        enum: ["online", "cash", "bank", "whatsapp"],
+        default: "whatsapp",
+      },
+    },
+    personalAccount: {
+      bankName: String,
+      accountNumber: String,
+      accountName: String,
     },
     paymentSettings: {
       activeProvider: {
@@ -145,7 +195,7 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 /**
@@ -164,7 +214,8 @@ StoreSettingsSchema.statics.getSettings = async function () {
   return settings;
 };
 
-const StoreSettings = (mongoose.models.StoreSettings as mongoose.Model<IStoreSettingsDocument>) ||
+const StoreSettings =
+  (mongoose.models.StoreSettings as mongoose.Model<IStoreSettingsDocument>) ||
   mongoose.model<IStoreSettingsDocument>("StoreSettings", StoreSettingsSchema);
-  
+
 export default StoreSettings;

@@ -1,6 +1,14 @@
 import React from "react";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, Truck, RefreshCw, HelpCircle, Star, Sparkles } from "lucide-react";
+import {
+  ArrowRight,
+  ShieldCheck,
+  Truck,
+  RefreshCw,
+  HelpCircle,
+  Star,
+  Sparkles,
+} from "lucide-react";
 
 import dbConnect from "@/lib/db/connect";
 import Product from "@/lib/db/models/Product";
@@ -9,10 +17,38 @@ import ProductCard from "@/components/storefront/ProductCard";
 
 // Mock fallbacks if Database is not seeded/empty
 const MOCK_CATEGORIES = [
-  { _id: "cat1", name: "Electronics", slug: "electronics", image: { url: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&auto=format&fit=crop&q=60" } },
-  { _id: "cat2", name: "Fashion", slug: "fashion", image: { url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&auto=format&fit=crop&q=60" } },
-  { _id: "cat3", name: "Home & Living", slug: "home-living", image: { url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500&auto=format&fit=crop&q=60" } },
-  { _id: "cat4", name: "Beauty & Personal Care", slug: "beauty", image: { url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&auto=format&fit=crop&q=60" } },
+  {
+    _id: "cat1",
+    name: "Electronics",
+    slug: "electronics",
+    image: {
+      url: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&auto=format&fit=crop&q=60",
+    },
+  },
+  {
+    _id: "cat2",
+    name: "Fashion",
+    slug: "fashion",
+    image: {
+      url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&auto=format&fit=crop&q=60",
+    },
+  },
+  {
+    _id: "cat3",
+    name: "Home & Living",
+    slug: "home-living",
+    image: {
+      url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500&auto=format&fit=crop&q=60",
+    },
+  },
+  {
+    _id: "cat4",
+    name: "Beauty & Personal Care",
+    slug: "beauty",
+    image: {
+      url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&auto=format&fit=crop&q=60",
+    },
+  },
 ];
 
 const MOCK_PRODUCTS = [
@@ -22,7 +58,12 @@ const MOCK_PRODUCTS = [
     slug: "wireless-headphones",
     price: 45000,
     discountPrice: 38000,
-    images: [{ url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60", alt: "Wireless headphones" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60",
+        alt: "Wireless headphones",
+      },
+    ],
     avgRating: 4.8,
     reviewCount: 24,
     stock: 12,
@@ -33,7 +74,12 @@ const MOCK_PRODUCTS = [
     name: "Classic Chronograph Wristwatch",
     slug: "classic-wristwatch",
     price: 65000,
-    images: [{ url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60", alt: "Classic wristwatch" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60",
+        alt: "Classic wristwatch",
+      },
+    ],
     avgRating: 4.6,
     reviewCount: 15,
     stock: 4,
@@ -45,7 +91,12 @@ const MOCK_PRODUCTS = [
     slug: "ergonomic-office-chair",
     price: 95000,
     discountPrice: 80000,
-    images: [{ url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60", alt: "Office chair" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60",
+        alt: "Office chair",
+      },
+    ],
     avgRating: 4.7,
     reviewCount: 30,
     stock: 8,
@@ -56,7 +107,12 @@ const MOCK_PRODUCTS = [
     name: "Smart Fitness Watch Tracker",
     slug: "smart-fitness-tracker",
     price: 25000,
-    images: [{ url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60", alt: "Fitness watch" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60",
+        alt: "Fitness watch",
+      },
+    ],
     avgRating: 4.4,
     reviewCount: 9,
     stock: 0,
@@ -67,20 +123,26 @@ const MOCK_PRODUCTS = [
 async function getHomeData() {
   try {
     await dbConnect();
-    
+
     // Attempt database retrieval
-    const categories = await Category.find({ isActive: true }).sort({ order: 1 }).limit(6).lean();
-    const products = await Product.find({ status: "active" }).sort({ createdAt: -1 }).limit(8).lean();
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1 })
+      .limit(6)
+      .lean();
+    const products = await Product.find({ status: "active" })
+      .sort({ createdAt: -1 })
+      .limit(8)
+      .lean();
 
     return {
-      categories: categories.length > 0 ? JSON.parse(JSON.stringify(categories)) : MOCK_CATEGORIES,
-      products: products.length > 0 ? JSON.parse(JSON.stringify(products)) : MOCK_PRODUCTS,
+      categories: categories,
+      products: products,
     };
   } catch (error) {
     console.error("DB Fetching error on Home page:", error);
     return {
-      categories: MOCK_CATEGORIES,
-      products: MOCK_PRODUCTS,
+      categories: [],
+      products: [],
     };
   }
 }
@@ -109,7 +171,9 @@ export default async function HomePage() {
               </span>
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
-              Discover top quality curated electronics, fashion apparel, and home essentials. Experience fast delivery and seamless checkout today.
+              Discover top quality curated electronics, fashion apparel, and
+              home essentials. Experience fast delivery and seamless checkout
+              today.
             </p>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
               <Link
@@ -137,9 +201,15 @@ export default async function HomePage() {
               className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-8 text-white">
-              <span className="text-xs uppercase font-bold tracking-widest text-primary-400">Exclusive Deals</span>
-              <h3 className="text-xl font-bold mt-1">Up to 40% Off New Items</h3>
-              <p className="text-sm text-neutral-300 mt-1">Free delivery on qualifying checkout sessions.</p>
+              <span className="text-xs uppercase font-bold tracking-widest text-primary-400">
+                Exclusive Deals
+              </span>
+              <h3 className="text-xl font-bold mt-1">
+                Up to 40% Off New Items
+              </h3>
+              <p className="text-sm text-neutral-300 mt-1">
+                Free delivery on qualifying checkout sessions.
+              </p>
             </div>
           </div>
         </div>
@@ -151,40 +221,63 @@ export default async function HomePage() {
           <div className="flex items-start gap-4">
             <Truck className="h-6 w-6 text-primary-500 flex-shrink-0" />
             <div>
-              <h4 className="font-bold text-foreground text-sm">Swift Delivery</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Prompt shipping to major zones in Nigeria.</p>
+              <h4 className="font-bold text-foreground text-sm">
+                Swift Delivery
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Prompt shipping to major zones in Nigeria.
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <ShieldCheck className="h-6 w-6 text-primary-500 flex-shrink-0" />
             <div>
-              <h4 className="font-bold text-foreground text-sm">Secure Checkout</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Secured card & account transfers.</p>
+              <h4 className="font-bold text-foreground text-sm">
+                Secure Checkout
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Secured card & account transfers.
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <RefreshCw className="h-6 w-6 text-primary-500 flex-shrink-0" />
             <div>
-              <h4 className="font-bold text-foreground text-sm">Easy Returns</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">3-day return policy for peace of mind.</p>
+              <h4 className="font-bold text-foreground text-sm">
+                Easy Returns
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                3-day return policy for peace of mind.
+              </p>
             </div>
           </div>
           <div className="flex items-start gap-4">
             <HelpCircle className="h-6 w-6 text-primary-500 flex-shrink-0" />
             <div>
-              <h4 className="font-bold text-foreground text-sm">24/7 Assistance</h4>
-              <p className="text-xs text-muted-foreground mt-0.5">Dedicated WhatsApp & email hotline.</p>
+              <h4 className="font-bold text-foreground text-sm">
+                24/7 Assistance
+              </h4>
+              <p className="text-xs text-muted-foreground mt-0.5">
+                Dedicated WhatsApp & email hotline.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Categories Grid */}
-      <section id="categories" className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+      <section
+        id="categories"
+        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6"
+      >
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">Shop by Category</h2>
-            <p className="text-sm text-muted-foreground mt-1">Explore our broad range of products curated for you</p>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">
+              Shop by Category
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Explore our broad range of products curated for you
+            </p>
           </div>
         </div>
 
@@ -212,7 +305,9 @@ export default async function HomePage() {
 
               {/* Title */}
               <div className="absolute inset-0 z-2 p-6 flex flex-col justify-end text-white">
-                <h3 className="font-bold text-base sm:text-lg tracking-wide">{cat.name}</h3>
+                <h3 className="font-bold text-base sm:text-lg tracking-wide">
+                  {cat.name}
+                </h3>
                 <span className="text-[11px] font-semibold text-primary-300 uppercase tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   View Items &rarr;
                 </span>
@@ -226,8 +321,12 @@ export default async function HomePage() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         <div className="flex items-end justify-between">
           <div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">Featured Products</h2>
-            <p className="text-sm text-muted-foreground mt-1">Handpicked premium items with incredible value</p>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">
+              Featured Products
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Handpicked premium items with incredible value
+            </p>
           </div>
           <Link
             href="/products"
