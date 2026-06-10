@@ -15,8 +15,8 @@ export async function GET(
     const { id } = await params;
     const coupon = await Coupon.findById(id);
     const orders = await Order.find({
-      couponCode: coupon?.code,
-      status: { $nin: ["initialized", "cancelled"] },
+      couponUsed: coupon?.code,
+      status: { $nin: ["draft", "cancelled"] },
     }).sort({ createdAt: -1 });
     // .populate({
     //   path: "user",
