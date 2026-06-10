@@ -4,6 +4,7 @@ import dbConnect from "@/lib/db/connect";
 import Product from "@/lib/db/models/Product";
 import ProductVariant from "@/lib/db/models/ProductVariant";
 import ProductDetailInteractive from "./ProductDetailInteractive";
+import Link from "next/link";
 
 interface DetailPageProps {
   params: Promise<{ slug: string }>;
@@ -43,9 +44,13 @@ export default async function ProductDetailPage({ params }: DetailPageProps) {
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 space-y-12">
       {/* Breadcrumbs */}
       <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-        <span className="hover:text-foreground cursor-pointer">Home</span>
+        <Link href="/" className="hover:text-foreground cursor-pointer">
+          Home
+        </Link>
         <span>/</span>
-        <span className="hover:text-foreground cursor-pointer">Products</span>
+        <Link href="/products" className="hover:text-foreground cursor-pointer">
+          Products
+        </Link>
         <span>/</span>
         <span className="text-foreground truncate max-w-xs">
           {product.name}

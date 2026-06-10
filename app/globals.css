@@ -283,3 +283,14 @@ body {
   background: oklch(0.16 0.006 260 / 0.7);
   border-color: oklch(0.3 0.008 260 / 0.3);
 }
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

@@ -13,7 +13,11 @@ const MOCK_PRODUCTS = [
     slug: "wireless-headphones",
     price: 45000,
     discountPrice: 38000,
-    images: [{ url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60",
+      },
+    ],
     avgRating: 4.8,
     reviewCount: 24,
     stock: 12,
@@ -23,7 +27,11 @@ const MOCK_PRODUCTS = [
     name: "Classic Chronograph Wristwatch",
     slug: "classic-wristwatch",
     price: 65000,
-    images: [{ url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60",
+      },
+    ],
     avgRating: 4.6,
     reviewCount: 15,
     stock: 4,
@@ -34,7 +42,11 @@ const MOCK_PRODUCTS = [
     slug: "ergonomic-office-chair",
     price: 95000,
     discountPrice: 80000,
-    images: [{ url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60",
+      },
+    ],
     avgRating: 4.7,
     reviewCount: 30,
     stock: 8,
@@ -44,7 +56,11 @@ const MOCK_PRODUCTS = [
     name: "Smart Fitness Watch Tracker",
     slug: "smart-fitness-tracker",
     price: 25000,
-    images: [{ url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60" }],
+    images: [
+      {
+        url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60",
+      },
+    ],
     avgRating: 4.4,
     reviewCount: 9,
     stock: 10,
@@ -59,7 +75,11 @@ interface ListingPageProps {
   }>;
 }
 
-async function getProductsData(search?: string, categorySlug?: string, sort?: string) {
+async function getProductsData(
+  search?: string,
+  categorySlug?: string,
+  sort?: string,
+) {
   try {
     await dbConnect();
 
@@ -103,7 +123,9 @@ async function getProductsData(search?: string, categorySlug?: string, sort?: st
       },
     ]);
 
-    const categories = await Category.find({ isActive: true }).sort({ order: 1 }).lean();
+    const categories = await Category.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean();
 
     return {
       products: JSON.parse(JSON.stringify(products)),
@@ -118,96 +140,181 @@ async function getProductsData(search?: string, categorySlug?: string, sort?: st
   }
 }
 
-export default async function ProductsListingPage({ searchParams }: ListingPageProps) {
+import { Filter, SlidersHorizontal, ChevronRight, Search } from "lucide-react";
+
+export default async function ProductsListingPage({
+  searchParams,
+}: ListingPageProps) {
   // Await async searchParams in Next 16
   const params = await searchParams;
-  const { products, categories } = await getProductsData(params.search, params.category, params.sort);
+  const { products, categories } = await getProductsData(
+    params.search,
+    params.category,
+    params.sort,
+  );
+
+  const currentCategory = categories.find(
+    (c: any) => c.slug === params.category,
+  );
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-      {/* Header */}
-      <div>
-        <h1 className="text-3xl font-extrabold tracking-tight text-foreground">
-          {params.category ? `${params.category.charAt(0).toUpperCase() + params.category.slice(1)} Products` : "Browse Products"}
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 lg:py-12 space-y-8">
+      {/* Page Header */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground uppercase tracking-widest">
+          <Link href="/" className="hover:text-primary-500 transition-colors">
+            Home
+          </Link>
+          <ChevronRight className="h-3 w-3" />
+          <span className="text-foreground">Shop</span>
+          {currentCategory && (
+            <>
+              <ChevronRight className="h-3 w-3" />
+              <span className="text-foreground">{currentCategory.name}</span>
+            </>
+          )}
+        </div>
+        <h1 className="text-3xl lg:text-4xl font-black tracking-tight text-foreground">
+          {currentCategory
+            ? currentCategory.name
+            : params.search
+              ? `Results for "${params.search}"`
+              : "Our Collection"}
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
-          Showing {products.length} premium results
+        <p className="text-sm text-muted-foreground">
+          Explore {products.length} handpicked premium products
         </p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
-        {/* Filters Panel - Desktop */}
-        <aside className="space-y-6 hidden lg:block bg-surface-secondary border border-border p-6 rounded-2xl">
-          <div className="space-y-1">
-            <h3 className="font-bold text-sm uppercase tracking-wider text-foreground">Categories</h3>
-            <p className="text-xs text-muted-foreground">Filter by your preference</p>
-          </div>
-          <div className="flex flex-col gap-2">
+      {/* Mobile Categories - Horizontal Scroll */}
+      <div className="lg:hidden w-[93vw] overflow-hidden">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 select-none">
+          <Link
+            href="/products"
+            className={`whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border flex-shrink-0 ${
+              !params.category
+                ? "bg-primary-500 border-primary-500 text-white shadow-soft"
+                : "bg-surface border-border text-muted-foreground"
+            }`}
+          >
+            All Items
+          </Link>
+          {categories.map((cat: any) => (
             <Link
-              href="/products"
-              className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${!params.category ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
-                }`}
+              key={cat._id}
+              href={`/products?category=${cat.slug}${params.sort ? `&sort=${params.sort}` : ""}`}
+              className={`whitespace-nowrap px-5 py-2 rounded-full text-xs font-bold uppercase tracking-wider transition-all border flex-shrink-0 ${
+                params.category === cat.slug
+                  ? "bg-primary-500 border-primary-500 text-white shadow-soft"
+                  : "bg-surface border-border text-muted-foreground"
+              }`}
             >
-              All Categories
+              {cat.name}
             </Link>
-            {categories.map((cat: any) => (
-              <Link
-                key={cat._id}
-                href={`/products?category=${cat.slug}${params.sort ? `&sort=${params.sort}` : ""}`}
-                className={`text-sm py-1.5 px-3 rounded-lg font-medium transition-colors ${params.category === cat.slug ? "bg-primary-500 text-white" : "hover:bg-border text-muted-foreground hover:text-foreground"
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+        {/* Sidebar Filters - Desktop */}
+        <aside className="hidden lg:block lg:col-span-3 space-y-8 sticky top-24">
+          <div className="bg-surface-secondary border border-border p-6 rounded-2xl space-y-6">
+            <div className="flex items-center gap-2 border-b border-border pb-4">
+              <Filter className="h-4 w-4 text-primary-500" />
+              <h3 className="font-bold text-sm uppercase tracking-widest">
+                Filters
+              </h3>
+            </div>
+
+            <div className="space-y-4">
+              <h4 className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+                Categories
+              </h4>
+              <div className="flex flex-col gap-1.5">
+                <Link
+                  href="/products"
+                  className={`text-sm py-2 px-3 rounded-xl font-semibold transition-all ${
+                    !params.category
+                      ? "bg-primary-500 text-white shadow-soft"
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground"
                   }`}
-              >
-                {cat.name}
-              </Link>
-            ))}
+                >
+                  All Categories
+                </Link>
+                {categories.map((cat: any) => (
+                  <Link
+                    key={cat._id}
+                    href={`/products?category=${cat.slug}${params.sort ? `&sort=${params.sort}` : ""}`}
+                    className={`text-sm py-2 px-3 rounded-xl font-semibold transition-all ${
+                      params.category === cat.slug
+                        ? "bg-primary-500 text-white shadow-soft"
+                        : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                    }`}
+                  >
+                    {cat.name}
+                  </Link>
+                ))}
+              </div>
+            </div>
           </div>
         </aside>
 
-        {/* Products Grid */}
-        <div className="lg:col-span-3 space-y-6">
-          {/* Sorting / Quick details */}
-          <div className="flex flex-wrap items-center justify-between gap-4 p-4 bg-surface-secondary border border-border rounded-xl">
-            <span className="text-xs font-semibold text-muted-foreground">
-              Order Results:
-            </span>
+        {/* Main Content */}
+        <div className="lg:col-span-9 space-y-6">
+          {/* Controls Bar */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-2 pl-4 pr-2 bg-surface-secondary border border-border rounded-2xl">
             <div className="flex items-center gap-2">
-              <Link
-                href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=latest`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort !== "price_asc" && params.sort !== "price_desc" && params.sort !== "rating"
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-surface border-border text-muted-foreground hover:text-foreground"
+              <SlidersHorizontal className="h-4 w-4 text-muted-foreground" />
+              <span className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+                Sort By:
+              </span>
+            </div>
+
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {[
+                { label: "Latest", value: "latest" },
+                { label: "Price: Low to High", value: "price_asc" },
+                { label: "Price: High to Low", value: "price_desc" },
+                { label: "Top Rated", value: "rating" },
+              ].map((opt) => (
+                <Link
+                  key={opt.value}
+                  href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=${opt.value}`}
+                  className={`whitespace-nowrap text-[10px] font-black uppercase tracking-tighter px-4 py-2 rounded-xl border transition-all ${
+                    params.sort === opt.value ||
+                    (!params.sort && opt.value === "latest")
+                      ? "bg-foreground text-background border-foreground shadow-soft"
+                      : "bg-surface border-border text-muted-foreground hover:text-foreground"
                   }`}
-              >
-                Latest
-              </Link>
-              <Link
-                href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=price_asc`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort === "price_asc"
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                Price: Low to High
-              </Link>
-              <Link
-                href={`/products?${params.category ? `category=${params.category}&` : ""}${params.search ? `search=${params.search}&` : ""}sort=price_desc`}
-                className={`text-xs px-3 py-1.5 rounded-full font-bold border transition-colors ${params.sort === "price_desc"
-                    ? "bg-foreground text-background border-foreground"
-                    : "bg-surface border-border text-muted-foreground hover:text-foreground"
-                  }`}
-              >
-                Price: High to Low
-              </Link>
+                >
+                  {opt.label}
+                </Link>
+              ))}
             </div>
           </div>
 
+          {/* Product Grid */}
           {products.length === 0 ? (
-            <div className="text-center py-20 bg-surface-secondary rounded-2xl border border-border">
-              <h3 className="text-lg font-bold text-foreground">No Products Found</h3>
-              <p className="text-sm text-muted-foreground mt-1">Try relaxing your search parameters</p>
+            <div className="flex flex-col items-center justify-center py-24 px-6 bg-surface-secondary rounded-3xl border border-dashed border-border text-center">
+              <div className="h-16 w-16 bg-surface border border-border rounded-full flex items-center justify-center mb-4">
+                <Search className="h-6 w-6 text-muted" />
+              </div>
+              <h3 className="text-xl font-bold text-foreground">
+                No Products Found
+              </h3>
+              <p className="text-sm text-muted-foreground mt-2 max-w-xs mx-auto">
+                We couldn't find any items matching your current filters. Try
+                relaxing your search or choosing a different category.
+              </p>
+              <Link
+                href="/products"
+                className="mt-6 text-primary-500 font-bold uppercase text-xs tracking-widest hover:underline"
+              >
+                Clear all filters
+              </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 lg:gap-8">
               {products.map((product: any) => (
                 <ProductCard key={product._id} product={product} />
               ))}

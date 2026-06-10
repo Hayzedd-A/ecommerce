@@ -7,8 +7,15 @@ import { SocialIcon } from "react-social-icons";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 export default function Footer() {
-  const { socialLinks, storeName, description, address, phone, email, aboutUs } =
-    useStoreSettings();
+  const {
+    socialLinks,
+    storeName,
+    description,
+    address,
+    phone,
+    email,
+    aboutUs,
+  } = useStoreSettings();
   const currentYear = new Date().getFullYear();
 
   return (
@@ -53,12 +60,12 @@ export default function Footer() {
                 </Link>
               </li>
               <li>
-                <Link
+                {/* <Link
                   href="/categories"
                   className="hover:text-primary-500 transition-colors"
                 >
                   Shop Categories
-                </Link>
+                </Link> */}
               </li>
               {aboutUs?.showAboutUsPage !== false && (
                 <li>
@@ -90,7 +97,7 @@ export default function Footer() {
           </div>
 
           {/* Customer Service */}
-          <div>
+          {/* <div>
             <h4 className="text-sm font-semibold uppercase tracking-wider text-foreground mb-4">
               Customer Support
             </h4>
@@ -128,7 +135,7 @@ export default function Footer() {
                 </a>
               </li>
             </ul>
-          </div>
+          </div> */}
 
           {/* Contact Details */}
           <div>

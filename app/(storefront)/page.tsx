@@ -65,25 +65,29 @@ async function getHomeData() {
 export default async function HomePage() {
   const { categories, products, settings } = await getHomeData();
 
-  const heroTitle = settings?.heroContent?.title || "Elevate Your Shopping Experience";
-  const heroSubtitle = settings?.heroContent?.subtitle || "Discover top quality curated electronics, fashion apparel, and home essentials. Experience fast delivery and seamless checkout today.";
-  const heroButtonText = settings?.heroContent?.buttonText || "Shop Collection";
+  const heroTitle =
+    settings?.heroContent?.title || "Elevate Your Shopping Experience";
+  const heroSubtitle =
+    settings?.heroContent?.subtitle ||
+    "Discover top quality curated electronics, fashion apparel, and home essentials. Experience fast delivery and seamless checkout today.";
+  const heroButtonText =
+    settings?.heroContent?.buttonText || "Shop Collections";
   const heroButtonLink = settings?.heroContent?.buttonLink || "/products";
-
+  const showAboutUsPage = settings?.aboutUs?.showAboutUsPage || false;
   return (
     <div className="space-y-16 pb-16">
       {/* Premium Hero Section */}
-      <section className="relative bg-surface-secondary border-b border-border py-20 lg:py-28 overflow-hidden">
+      <section className="relative bg-surface-secondary border-b border-border py-10 lg:py-28 overflow-hidden">
         {/* Gradients */}
         <div className="absolute top-0 right-0 w-[45%] h-[90%] rounded-full bg-primary-500/10 blur-[130px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[45%] h-[90%] rounded-full bg-accent-500/10 blur-[130px] pointer-events-none" />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
           <div className="space-y-6 text-center lg:text-left">
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-500/10 text-primary-600 text-xs font-bold uppercase tracking-wider">
+            {/* <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-primary-500/10 text-primary-600 text-xs font-bold uppercase tracking-wider">
               <Sparkles className="h-3.5 w-3.5" />
               New Season Collections
-            </span>
+            </span> */}
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
               {heroTitle}
             </h1>
@@ -98,12 +102,14 @@ export default async function HomePage() {
                 {heroButtonText}
                 <ArrowRight className="h-4.5 w-4.5" />
               </Link>
-              <Link
-                href="#categories"
-                className="px-6 py-3 rounded-full bg-surface border border-border hover:bg-surface-secondary text-foreground font-semibold hover:-translate-y-0.5 active:scale-95 transition-all"
-              >
-                View Categories
-              </Link>
+              {showAboutUsPage && (
+                <Link
+                  href="/about"
+                  className="px-6 py-3 rounded-full bg-surface border border-border hover:bg-surface-secondary text-foreground font-semibold hover:-translate-y-0.5 active:scale-95 transition-all"
+                >
+                  About Us
+                </Link>
+              )}
             </div>
           </div>
 

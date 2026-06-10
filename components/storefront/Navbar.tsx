@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   ShoppingCart,
   Heart,
@@ -26,6 +26,7 @@ import { useTheme } from "next-themes";
 
 export default function Navbar() {
   const router = useRouter();
+  const pathname = usePathname();
   const dispatch = useAppDispatch();
   const { theme, setTheme } = useTheme();
 
@@ -39,6 +40,8 @@ export default function Navbar() {
 
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
+
+  const showSearch = pathname === "/" || pathname === "/products";
 
   const handleLogout = async () => {
     try {
@@ -62,168 +65,169 @@ export default function Navbar() {
 
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-border transition-colors duration-200">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-        {/* Brand Logo */}
-        <Link href="/" className="flex items-center gap-2 group">
-          <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent group-hover:opacity-85 transition-opacity">
-            {storeName ?? "STOREFRONT"}
-          </span>
-        </Link>
-
-        {/* Search Bar - Desktop */}
-        <form
-          onSubmit={handleSearchSubmit}
-          className="hidden md:flex items-center relative flex-1 max-w-md"
-        >
-          <input
-            type="text"
-            placeholder="Search products, categories..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-surface-secondary text-foreground text-sm pl-10 pr-4 py-2 rounded-full border border-border focus:border-primary-500 focus:outline-none transition-colors"
-          />
-          <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
-        </form>
-
-        {/* Navigation Actions */}
-        <nav className="hidden md:flex items-center gap-4 text-foreground">
-          {/* Admin link for admin/staff */}
-          {isAuthenticated &&
-            user &&
-            (user.role === "admin" || user.role === "staff") && (
-              <Link
-                href="/admin"
-                className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
-                title="Admin Dashboard"
-              >
-                <LayoutDashboard className="h-5 w-5" />
-              </Link>
-            )}
-
-          {/* Theme Toggle */}
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
-            title="Toggle Theme"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5 text-warning-500" />
-            ) : (
-              <Moon className="h-5 w-5" />
-            )}
-          </button>
-
-          {/* Wishlist */}
-          <Link
-            href="/account/wishlist"
-            className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground relative transition-all duration-200"
-            title="Wishlist"
-          >
-            <Heart className="h-5 w-5" />
-            {wishlistCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-accent-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-scale-in">
-                {wishlistCount}
-              </span>
-            )}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="h-16 flex items-center justify-between gap-4">
+          {/* Brand Logo */}
+          <Link href="/" className="flex items-center gap-2 group shrink-0">
+            <span className="font-extrabold text-xl tracking-tight bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent group-hover:opacity-85 transition-opacity">
+              {storeName ?? "STOREFRONT"}
+            </span>
           </Link>
 
-          {/* Cart Trigger */}
-          <button
-            onClick={() => dispatch(toggleCartDrawer())}
-            className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground relative transition-all duration-200 cursor-pointer"
-            title="Shopping Cart"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 bg-primary-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-scale-in">
-                {cartCount}
-              </span>
-            )}
-          </button>
-
-          {/* User Profile / Login */}
-          {isAuthenticated ? (
-            <div className="relative group flex items-center">
-              <Link
-                href="/account"
-                className="flex items-center gap-1.5 p-1 rounded-full hover:bg-surface-secondary transition-all"
-              >
-                <div className="h-7 w-7 rounded-full bg-primary-500/20 text-primary-600 flex items-center justify-center font-bold text-xs uppercase">
-                  {user?.name?.[0] || "U"}
-                </div>
-              </Link>
-              {/* <button
-                onClick={handleLogout}
-                className="ml-2 p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-error-500 transition-all cursor-pointer"
-                title="Sign Out"
-              >
-                <LogOut className="h-4 w-4" />
-              </button> */}
-            </div>
-          ) : (
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold transition-all shadow-soft active:scale-95"
+          {/* Search Bar - Desktop */}
+          {showSearch && (
+            <form
+              onSubmit={handleSearchSubmit}
+              className="hidden md:flex items-center relative flex-1 max-w-md"
             >
-              <User className="h-4 w-4" />
-              Login
-            </Link>
+              <input
+                type="text"
+                placeholder="Search products, categories..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-surface-secondary text-foreground text-sm pl-10 pr-4 py-2 rounded-full border border-border focus:border-primary-500 focus:outline-none transition-colors"
+              />
+              <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+            </form>
           )}
-        </nav>
 
-        {/* Mobile Header Buttons */}
-        <div className="flex md:hidden items-center gap-2">
-          <button
-            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-            className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground"
-          >
-            {theme === "dark" ? (
-              <Sun className="h-5 w-5 text-warning-500" />
+          {/* Navigation Actions */}
+          <nav className="hidden md:flex items-center gap-4 text-foreground">
+            {/* Admin link for admin/staff */}
+            {isAuthenticated &&
+              user &&
+              (user.role === "admin" || user.role === "staff") && (
+                <Link
+                  href="/admin"
+                  className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
+                  title="Admin Dashboard"
+                >
+                  <LayoutDashboard className="h-5 w-5" />
+                </Link>
+              )}
+
+            {/* Theme Toggle */}
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200 cursor-pointer"
+              title="Toggle Theme"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 text-warning-500" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
+
+            {/* Wishlist */}
+            <Link
+              href="/account/wishlist"
+              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground relative transition-all duration-200"
+              title="Wishlist"
+            >
+              <Heart className="h-5 w-5" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-accent-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-scale-in">
+                  {wishlistCount}
+                </span>
+              )}
+            </Link>
+
+            {/* Cart Trigger */}
+            <button
+              onClick={() => dispatch(toggleCartDrawer())}
+              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground relative transition-all duration-200 cursor-pointer"
+              title="Shopping Cart"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 bg-primary-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-scale-in">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            {/* User Profile / Login */}
+            {isAuthenticated ? (
+              <div className="relative group flex items-center">
+                <Link
+                  href="/account"
+                  className="flex items-center gap-1.5 p-1 rounded-full hover:bg-surface-secondary transition-all"
+                >
+                  <div className="h-7 w-7 rounded-full bg-primary-500/20 text-primary-600 flex items-center justify-center font-bold text-xs uppercase">
+                    {user?.name?.[0] || "U"}
+                  </div>
+                </Link>
+              </div>
             ) : (
-              <Moon className="h-5 w-5" />
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-1 px-4 py-2 rounded-full bg-primary-500 hover:bg-primary-600 text-white text-sm font-semibold transition-all shadow-soft active:scale-95"
+              >
+                <User className="h-4 w-4" />
+                Login
+              </Link>
             )}
-          </button>
+          </nav>
 
-          <button
-            onClick={() => dispatch(toggleCartDrawer())}
-            className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground relative"
-          >
-            <ShoppingCart className="h-5 w-5" />
-            {cartCount > 0 && (
-              <span className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
-                {cartCount}
-              </span>
-            )}
-          </button>
+          {/* Mobile Header Buttons */}
+          <div className="flex md:hidden items-center gap-2">
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-5 w-5 text-warning-500" />
+              ) : (
+                <Moon className="h-5 w-5" />
+              )}
+            </button>
 
-          <button
-            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-            className="p-2 rounded-full hover:bg-surface-secondary text-foreground"
-          >
-            {isMobileMenuOpen ? (
-              <X className="h-5 w-5" />
-            ) : (
-              <Menu className="h-5 w-5" />
-            )}
-          </button>
+            <button
+              onClick={() => dispatch(toggleCartDrawer())}
+              className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground relative"
+            >
+              <ShoppingCart className="h-5 w-5" />
+              {cartCount > 0 && (
+                <span className="absolute top-0 right-0 bg-primary-500 text-white text-[9px] font-bold h-3.5 w-3.5 rounded-full flex items-center justify-center">
+                  {cartCount}
+                </span>
+              )}
+            </button>
+
+            <button
+              onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+              className="p-2 rounded-full hover:bg-surface-secondary text-foreground"
+            >
+              {isMobileMenuOpen ? (
+                <X className="h-5 w-5" />
+              ) : (
+                <Menu className="h-5 w-5" />
+              )}
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Search - Visible only on / and /products */}
+        {showSearch && (
+          <div className="md:hidden pb-3">
+            <form onSubmit={handleSearchSubmit} className="relative w-full">
+              <input
+                type="text"
+                placeholder="Search products..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full bg-surface-secondary text-foreground text-sm pl-10 pr-4 py-2 rounded-full border border-border focus:border-primary-500 focus:outline-none transition-colors"
+              />
+              <Search className="absolute top-3 left-3.5 h-4 w-4 text-muted-foreground" />
+            </form>
+          </div>
+        )}
       </div>
 
       {/* Mobile Drawer menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden glass border-b border-border p-4 space-y-4 animate-slide-down">
-          {/* Search Mobile */}
-          <form onSubmit={handleSearchSubmit} className="relative w-full">
-            <input
-              type="text"
-              placeholder="Search..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-surface-secondary text-foreground text-sm pl-10 pr-4 py-2 rounded-full border border-border focus:border-primary-500 focus:outline-none"
-            />
-            <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
-          </form>
-
           {/* Links list */}
           <div className="flex flex-col gap-2 font-medium">
             <Link
