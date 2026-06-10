@@ -12,7 +12,7 @@ import { Toggle } from "@/components/ui/Toggle";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 export default function AdminDeliveryLocationsPage() {
-  const { pickupEnabled, deliveryEnabled, refetchSettings } =
+  const { pickupEnabled, deliveryEnabled, refetchSettings, formatMoney } =
     useStoreSettings();
   const [locations, setLocations] = useState<any[]>([]);
   const [search, setSearch] = useState("");
@@ -180,7 +180,7 @@ export default function AdminDeliveryLocationsPage() {
                       )}
                     </td>
                     <td className="px-4 py-4 text-sm text-foreground">
-                      {location.price.toLocaleString()}
+                      {formatMoney(location.price)}
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
                       {location.estimatedDays || "—"}

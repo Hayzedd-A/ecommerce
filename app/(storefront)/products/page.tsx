@@ -90,12 +90,24 @@ async function getProductsData(search?: string, categorySlug?: string, sort?: st
       sortOptions = { avgRating: -1 };
     }
 
-    const products = await Product.find(query).sort(sortOptions).lean();
+    const products = await Product.aggregate([
+      { $match: query },
+      { $sort: sortOptions },
+      {
+        $lookup: {
+          from: "productvariants",
+          localField: "_id",
+          foreignField: "productId",
+          as: "variants",
+        },
+      },
+    ]);
+
     const categories = await Category.find({ isActive: true }).sort({ order: 1 }).lean();
 
     return {
-      products: products,
-      categories: categories,
+      products: JSON.parse(JSON.stringify(products)),
+      categories: JSON.parse(JSON.stringify(categories)),
     };
   } catch (error) {
     console.error("Error loading products list:", error);

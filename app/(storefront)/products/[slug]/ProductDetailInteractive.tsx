@@ -14,9 +14,9 @@ import { toast } from "react-hot-toast";
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { addToCart } from "@/lib/store/slices/cartSlice";
 import { toggleWishlistServer } from "@/lib/store/slices/wishlistSlice";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { cn } from "@/lib/utils/helpers";
 import { Button } from "@/components/ui/Button";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 interface ProductDetailInteractiveProps {
   product: {
@@ -39,11 +39,11 @@ export default function ProductDetailInteractive({
   product,
   variants = [],
 }: ProductDetailInteractiveProps) {
-  console.log(variants);
   const dispatch = useAppDispatch();
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
 
-  const isWishlisted = wishlistItems.some((id) => id === product._id);
+  const { formatMoney } = useStoreSettings();
+  const isWishlisted = wishlistItems.some((item) => item._id === product._id);
 
   const [activeImage, setActiveImage] = useState(
     product.images?.[0]?.url || "",
@@ -106,7 +106,7 @@ export default function ProductDetailInteractive({
   };
 
   const handleWishlistToggle = () => {
-    dispatch(toggleWishlistServer(product._id));
+    dispatch(toggleWishlistServer(product));
     if (isWishlisted) {
       toast.success("Removed from wishlist");
     } else {
@@ -203,11 +203,11 @@ export default function ProductDetailInteractive({
         {/* Pricing Panel */}
         <div className="p-4 bg-surface-secondary border border-border rounded-2xl flex items-baseline gap-3">
           <span className="text-2xl font-black text-foreground">
-            {formatCurrency(currentPrice)}
+            {formatMoney(currentPrice)}
           </span>
           {selectedVariant?.price === undefined && hasDiscount && (
             <span className="text-sm text-muted line-through">
-              {formatCurrency(product.price)}
+              {formatMoney(product.price)}
             </span>
           )}
         </div>

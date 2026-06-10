@@ -14,111 +14,12 @@ import dbConnect from "@/lib/db/connect";
 import Product from "@/lib/db/models/Product";
 import Category from "@/lib/db/models/Category";
 import ProductCard from "@/components/storefront/ProductCard";
+import Image from "next/image";
+import { CategoryGrid } from "@/components/storefront/CategoryGrid";
+import { ICategory, IProduct } from "@/lib/types";
+import getStoreSettings from "@/lib/settings.server";
 
 // Mock fallbacks if Database is not seeded/empty
-const MOCK_CATEGORIES = [
-  {
-    _id: "cat1",
-    name: "Electronics",
-    slug: "electronics",
-    image: {
-      url: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=500&auto=format&fit=crop&q=60",
-    },
-  },
-  {
-    _id: "cat2",
-    name: "Fashion",
-    slug: "fashion",
-    image: {
-      url: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=500&auto=format&fit=crop&q=60",
-    },
-  },
-  {
-    _id: "cat3",
-    name: "Home & Living",
-    slug: "home-living",
-    image: {
-      url: "https://images.unsplash.com/photo-1513694203232-719a280e022f?w=500&auto=format&fit=crop&q=60",
-    },
-  },
-  {
-    _id: "cat4",
-    name: "Beauty & Personal Care",
-    slug: "beauty",
-    image: {
-      url: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=500&auto=format&fit=crop&q=60",
-    },
-  },
-];
-
-const MOCK_PRODUCTS = [
-  {
-    _id: "prod1",
-    name: "Acoustic Noise Cancelling Wireless Headphones",
-    slug: "wireless-headphones",
-    price: 45000,
-    discountPrice: 38000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&auto=format&fit=crop&q=60",
-        alt: "Wireless headphones",
-      },
-    ],
-    avgRating: 4.8,
-    reviewCount: 24,
-    stock: 12,
-    isFeatured: true,
-  },
-  {
-    _id: "prod2",
-    name: "Classic Chronograph Wristwatch",
-    slug: "classic-wristwatch",
-    price: 65000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&auto=format&fit=crop&q=60",
-        alt: "Classic wristwatch",
-      },
-    ],
-    avgRating: 4.6,
-    reviewCount: 15,
-    stock: 4,
-    isFeatured: true,
-  },
-  {
-    _id: "prod3",
-    name: "Ergonomic Office Chair with Lumbar Support",
-    slug: "ergonomic-office-chair",
-    price: 95000,
-    discountPrice: 80000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=500&auto=format&fit=crop&q=60",
-        alt: "Office chair",
-      },
-    ],
-    avgRating: 4.7,
-    reviewCount: 30,
-    stock: 8,
-    isFeatured: true,
-  },
-  {
-    _id: "prod4",
-    name: "Smart Fitness Watch Tracker",
-    slug: "smart-fitness-tracker",
-    price: 25000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=500&auto=format&fit=crop&q=60",
-        alt: "Fitness watch",
-      },
-    ],
-    avgRating: 4.4,
-    reviewCount: 9,
-    stock: 0,
-    isFeatured: false,
-  },
-];
 
 async function getHomeData() {
   try {
@@ -129,26 +30,45 @@ async function getHomeData() {
       .sort({ order: 1 })
       .limit(6)
       .lean();
-    const products = await Product.find({ status: "active" })
-      .sort({ createdAt: -1 })
-      .limit(8)
-      .lean();
+
+    const products = await Product.aggregate([
+      { $match: { status: "active" } },
+      { $sort: { createdAt: -1 } },
+      { $limit: 8 },
+      {
+        $lookup: {
+          from: "productvariants",
+          localField: "_id",
+          foreignField: "productId",
+          as: "variants",
+        },
+      },
+    ]);
+
+    const settings = await getStoreSettings();
 
     return {
-      categories: categories,
-      products: products,
+      categories: JSON.parse(JSON.stringify(categories)) as ICategory[],
+      products: JSON.parse(JSON.stringify(products)) as IProduct[],
+      settings,
     };
   } catch (error) {
     console.error("DB Fetching error on Home page:", error);
     return {
       categories: [],
       products: [],
+      settings: null,
     };
   }
 }
 
 export default async function HomePage() {
-  const { categories, products } = await getHomeData();
+  const { categories, products, settings } = await getHomeData();
+
+  const heroTitle = settings?.heroContent?.title || "Elevate Your Shopping Experience";
+  const heroSubtitle = settings?.heroContent?.subtitle || "Discover top quality curated electronics, fashion apparel, and home essentials. Experience fast delivery and seamless checkout today.";
+  const heroButtonText = settings?.heroContent?.buttonText || "Shop Collection";
+  const heroButtonLink = settings?.heroContent?.buttonLink || "/products";
 
   return (
     <div className="space-y-16 pb-16">
@@ -165,22 +85,17 @@ export default async function HomePage() {
               New Season Collections
             </span>
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-foreground leading-[1.1]">
-              Elevate Your <br />
-              <span className="bg-gradient-to-r from-primary-500 to-accent-500 bg-clip-text text-transparent">
-                Shopping Experience
-              </span>
+              {heroTitle}
             </h1>
             <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto lg:mx-0">
-              Discover top quality curated electronics, fashion apparel, and
-              home essentials. Experience fast delivery and seamless checkout
-              today.
+              {heroSubtitle}
             </p>
             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4">
               <Link
-                href="/products"
+                href={heroButtonLink}
                 className="px-6 py-3 rounded-full bg-primary-500 hover:bg-primary-600 text-white font-semibold flex items-center gap-1.5 shadow-soft hover:shadow-card hover:-translate-y-0.5 active:scale-95 transition-all"
               >
-                Shop Collection
+                {heroButtonText}
                 <ArrowRight className="h-4.5 w-4.5" />
               </Link>
               <Link
@@ -212,6 +127,37 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Categories Grid */}
+
+      <CategoryGrid categories={categories} />
+
+      {/* Featured Products Grid */}
+      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        <div className="flex items-end justify-between">
+          <div>
+            <h2 className="text-2xl font-bold text-foreground tracking-tight">
+              Featured Products
+            </h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Handpicked premium items with incredible value
+            </p>
+          </div>
+          <Link
+            href="/products"
+            className="text-sm font-semibold text-primary-500 hover:text-primary-600 flex items-center gap-1 transition-colors"
+          >
+            Explore all
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          {products.map((prod: any) => (
+            <ProductCard key={prod._id} product={prod} />
+          ))}
         </div>
       </section>
 
@@ -262,85 +208,6 @@ export default async function HomePage() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Categories Grid */}
-      <section
-        id="categories"
-        className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6"
-      >
-        <div className="flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Shop by Category
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Explore our broad range of products curated for you
-            </p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {categories.map((cat: any) => (
-            <Link
-              href={`/products?category=${cat.slug}`}
-              key={cat._id}
-              className="group relative h-48 rounded-2xl overflow-hidden border border-border/80 shadow-soft bg-white hover:-translate-y-1 transition-transform"
-            >
-              {/* Overlay */}
-              <div className="absolute inset-0 bg-black/40 z-1 group-hover:bg-black/50 transition-colors" />
-
-              {/* Image */}
-              {cat.image?.url ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={cat.image.url}
-                  alt={cat.name}
-                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-                />
-              ) : (
-                <div className="h-full w-full bg-slate-200" />
-              )}
-
-              {/* Title */}
-              <div className="absolute inset-0 z-2 p-6 flex flex-col justify-end text-white">
-                <h3 className="font-bold text-base sm:text-lg tracking-wide">
-                  {cat.name}
-                </h3>
-                <span className="text-[11px] font-semibold text-primary-300 uppercase tracking-widest mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  View Items &rarr;
-                </span>
-              </div>
-            </Link>
-          ))}
-        </div>
-      </section>
-
-      {/* Featured Products Grid */}
-      <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
-        <div className="flex items-end justify-between">
-          <div>
-            <h2 className="text-2xl font-bold text-foreground tracking-tight">
-              Featured Products
-            </h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Handpicked premium items with incredible value
-            </p>
-          </div>
-          <Link
-            href="/products"
-            className="text-sm font-semibold text-primary-500 hover:text-primary-600 flex items-center gap-1 transition-colors"
-          >
-            Explore all
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-          {products.map((prod: any) => (
-            <ProductCard key={prod._id} product={prod} />
-          ))}
         </div>
       </section>
     </div>

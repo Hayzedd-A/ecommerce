@@ -2,12 +2,13 @@
 
 import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { Badge } from "@/components/ui/Badge";
 import Link from "next/link";
 import { ExternalLink, Package } from "lucide-react";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 export default function OrdersPage() {
+  const { formatMoney } = useStoreSettings();
   const { data, isLoading } = useQuery({
     queryKey: ["my-orders"],
     queryFn: async () => {
@@ -86,7 +87,7 @@ export default function OrdersPage() {
                   {order.status}
                 </Badge>
                 <span className="font-bold text-foreground">
-                  {formatCurrency(order.total)}
+                  {formatMoney(order.total)}
                 </span>
               </div>
             </div>

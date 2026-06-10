@@ -22,6 +22,7 @@ export interface IProductDocument extends Document {
   stock: number;
   trackStock: boolean;
   lowStockThreshold: number;
+  allowNegativeStock: boolean;
   status: "active" | "draft" | "archived";
   seoMeta?: {
     metaTitle?: string;
@@ -103,7 +104,7 @@ const ProductSchema = new Schema<IProductDocument>(
       type: Number,
       min: [0, "Discount price cannot be negative"],
       validate: {
-        validator: function (this: IProductDocument, val: number) {
+        validator: function (this: any, val: number) {
           return !val || val < this.price;
         },
         message: "Discount price must be less than the regular price",
@@ -133,12 +134,22 @@ const ProductSchema = new Schema<IProductDocument>(
       type: Number,
       required: true,
       default: 0,
-      min: [0, "Stock cannot be negative"],
+      validate: {
+        validator: function (this: any, val: number) {
+          return this.allowNegativeStock || val >= 0;
+        },
+        message:
+          "Stock cannot be negative for products that do not allow negative stock",
+      },
     },
     lowStockThreshold: {
       type: Number,
       default: 5,
       min: 0,
+    },
+    allowNegativeStock: {
+      type: Boolean,
+      default: false,
     },
     trackStock: {
       type: Boolean,
@@ -180,7 +191,8 @@ ProductSchema.index(
   { weights: { name: 10, tags: 5, description: 1 } },
 );
 
-const Product = (mongoose.models.Product as mongoose.Model<IProductDocument>) ||
+const Product =
+  (mongoose.models.Product as mongoose.Model<IProductDocument>) ||
   mongoose.model<IProductDocument>("Product", ProductSchema);
-  
+
 export default Product;

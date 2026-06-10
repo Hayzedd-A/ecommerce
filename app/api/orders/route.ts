@@ -11,11 +11,13 @@ import { AuthService } from "@/lib/services/auth.service";
 import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
 import { Coupon, StoreSettings, ProductVariant } from "@/lib/db/models";
 import mongoose from "mongoose";
+import { getRequestUser } from "@/lib/auth/getIdentity";
+import { upsertGuest } from "@/lib/auth/mergeGuest";
 
 export async function POST(req: NextRequest) {
   const session = await mongoose.startSession();
-  session.startTransaction();
   try {
+    session.startTransaction();
     await dbConnect();
     const body = await req.json();
 
@@ -44,24 +46,13 @@ export async function POST(req: NextRequest) {
       checkoutMethod,
     } = result.data;
 
+    await upsertGuest(req, {
+      email: guestEmail,
+      name: shippingAddress.fullName,
+      phone: guestPhone,
+    });
     // Identify user from cookie if present
-    let userId = req.headers.get("x-user-id");
-    let userEmail = req.headers.get("x-user-email");
-    const guestIdHeader = req.headers.get("x-guest-id");
-
-    if (!userId) {
-      const accessToken = req.cookies.get(COOKIE_ACCESS_TOKEN)?.value;
-      if (accessToken) {
-        try {
-          const payload = AuthService.verifyAccessToken(accessToken);
-          userId = payload.id;
-          userEmail = payload.email;
-        } catch {
-          userId = null;
-          userEmail = null;
-        }
-      }
-    }
+    const { _id: userId, email: userEmail } = await getRequestUser(req);
 
     // Recalculate and verify pricing on server
     let subtotal = 0;
@@ -197,10 +188,6 @@ export async function POST(req: NextRequest) {
       discount,
       total,
       couponUsed: couponUsed || undefined,
-      isGuest,
-      guestEmail: isGuest ? guestEmail : undefined,
-      guestPhone: isGuest ? guestPhone : undefined,
-      guestId: isGuest && guestIdHeader ? guestIdHeader : undefined,
       notes,
     });
 

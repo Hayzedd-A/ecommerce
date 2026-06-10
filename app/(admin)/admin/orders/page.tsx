@@ -5,25 +5,27 @@ import Link from "next/link";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import apiClient from "@/lib/api/client";
-import { formatCurrency, formatDate } from "@/lib/utils/formatters";
+import { formatDate } from "@/lib/utils/formatters";
 import { toast } from "react-hot-toast";
-
-const statusOptions = [
-  { label: "All", value: "" },
-  { label: "Pending", value: "pending_payment" },
-  { label: "Paid", value: "paid" },
-  { label: "Processing", value: "processing" },
-  { label: "Ready", value: "ready_for_pickup" },
-  { label: "Completed", value: "completed" },
-  { label: "Cancelled", value: "cancelled" },
-];
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
+import {
+  orderStatusColors,
+  orderStatusLabels,
+  orderStatusOptions,
+  paymentStatusColors,
+  paymentStatusLabels,
+} from "@/lib/utils/helpers";
+import { IOrderObject, OrderStatus, OrderStatusEnum } from "@/lib/types";
 
 export default function AdminOrdersPage() {
-  const [orders, setOrders] = useState<any[]>([]);
-  const [statusFilter, setStatusFilter] = useState("");
+  const [orders, setOrders] = useState<IOrderObject[]>([]);
+  const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+  const [refetch, setRefetch] = useState(false);
+  const { formatMoney } = useStoreSettings();
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -42,7 +44,22 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [page, statusFilter]);
+  }, [page, statusFilter, refetch]);
+
+  const updateStatus = async (orderId: string, status: OrderStatus) => {
+    setIsUpdating(true);
+    try {
+      const response = await apiClient.put(`/admin/orders/${orderId}`, {
+        status,
+      });
+      toast.success("Order status updated successfully");
+      setRefetch(!refetch);
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || "Unable to load orders");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
 
   return (
     <div className="space-y-8">
@@ -56,10 +73,13 @@ export default function AdminOrdersPage() {
         <div className="grid gap-3 sm:grid-cols-[1fr_auto] w-full sm:w-auto">
           <select
             value={statusFilter}
-            onChange={(event) => setStatusFilter(event.target.value)}
+            onChange={(event) =>
+              setStatusFilter(event.target.value as OrderStatus)
+            }
             className="rounded-lg border border-border bg-input-bg px-4 py-2 text-foreground outline-none focus:border-primary-500 focus:ring-4 focus:ring-ring"
           >
-            {statusOptions.map((option) => (
+            <option value="all">All</option>
+            {orderStatusOptions.map((option) => (
               <option key={option.value} value={option.value}>
                 {option.label}
               </option>
@@ -121,18 +141,56 @@ export default function AdminOrdersPage() {
                       {formatDate(order.createdAt)}
                     </td>
                     <td className="px-4 py-4 font-semibold text-foreground">
-                      {formatCurrency(order.total)}
+                      {formatMoney(order.total)}
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
-                      {order.deliveryLocation?.type || "N/A"}
+                      {order.deliveryLocation?.type === "pickup"
+                        ? "Pick Up"
+                        : "Delivery"}
                     </td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
-                      {order.payment?.status || "pending"}
+                    <td
+                      className={`px-4 py-4 text-sm text-muted-foreground capitalize `}
+                    >
+                      <span
+                        className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${
+                          paymentStatusColors[order.payment?.status] ||
+                          "bg-slate-50 border-slate-200"
+                        }`}
+                      >
+                        {paymentStatusLabels[order.payment?.status] ||
+                          order.payment?.status}
+                      </span>
                     </td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground capitalize">
-                      {order.status.replace(/_/g, " ")}
+                    <td
+                      className={`px-4 py-4 text-sm text-muted-foreground capitalize `}
+                    >
+                      <span
+                        className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${
+                          orderStatusColors[order.status] ||
+                          "bg-slate-50 border-slate-200"
+                        }`}
+                      >
+                        {orderStatusLabels[order.status] ||
+                          order.status.replace(/_/g, " ")}
+                      </span>
                     </td>
-                    <td className="px-4 py-4 text-right">
+                    <td className="px-4 py-4 text-right flex gap-3 items-center">
+                      <select
+                        value={order.status}
+                        onChange={(event) =>
+                          updateStatus(
+                            order._id,
+                            event.target.value as OrderStatus,
+                          )
+                        }
+                        className="w-32 text-sm rounded-lg border border-border bg-input-bg px-2 py-1 text-foreground outline-none focus:border-primary-500 focus:ring-4 focus:ring-ring"
+                      >
+                        {orderStatusOptions.map((option) => (
+                          <option key={option.value} value={option.value}>
+                            {option.label}
+                          </option>
+                        ))}
+                      </select>
                       <Link
                         href={`/admin/orders/${order._id}`}
                         className="text-xs font-semibold text-primary-500 hover:text-primary-600 hover:underline"

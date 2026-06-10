@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import Coupon from "@/lib/db/models/Coupon";
 import { formatCurrency } from "@/lib/utils/formatters";
+import getStoreSettings from "@/lib/settings.server";
 
 export async function POST(req: NextRequest) {
   try {
     await dbConnect();
+    const settings = await getStoreSettings();
     const body = await req.json();
     const code = (body.code || "").toString().trim().toUpperCase();
     const subtotal = Number(body.subtotal || 0);
@@ -58,10 +60,10 @@ export async function POST(req: NextRequest) {
     let message = "Coupon applied successfully";
     if (coupon.type === "percentage") {
       discount = Math.round((subtotal * coupon.value) / 100);
-      message = `${coupon.value}% coupon applied successfully, you saved ${formatCurrency(discount)}`;
+      message = `${coupon.value}% coupon applied successfully, you saved ${formatCurrency(discount, settings?.currencySymbol)}`;
     } else {
       discount = Math.round(coupon.value);
-      message = `${coupon.value} coupon applied successfully, you saved ${formatCurrency(discount)}`;
+      message = `${coupon.value} coupon applied successfully, you saved ${formatCurrency(discount, settings?.currencySymbol)}`;
     }
 
     // Ensure discount not greater than subtotal

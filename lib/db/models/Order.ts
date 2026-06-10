@@ -1,7 +1,11 @@
 import mongoose, { Schema, type Document } from "mongoose";
+import User from "./User";
+import Guest from "./Guest";
+import { OrderStatus, OrderStatusEnum } from "@/lib/types";
 
 export interface IOrderDocument extends Document {
   userId?: mongoose.Types.ObjectId;
+  userModel: "User" | "Guest";
   orderNumber: string;
   items: {
     productId: mongoose.Types.ObjectId;
@@ -20,14 +24,7 @@ export interface IOrderDocument extends Document {
     country: string;
     zipCode?: string;
   };
-  status:
-    | "initialized"
-    | "pending"
-    | "processing"
-    | "in_progress"
-    | "ready_for_pickup"
-    | "completed"
-    | "cancelled";
+  status: OrderStatus;
   subtotal: number;
   deliveryFee: number;
   deliveryMethod: "delivery" | "pickup";
@@ -37,12 +34,13 @@ export interface IOrderDocument extends Document {
   couponUsed?: string;
   paymentId?: mongoose.Types.ObjectId;
   notes?: string;
-  isGuest: boolean;
-  guestEmail?: string;
-  guestId?: string;
-  guestPhone?: string;
   createdAt: Date;
   updatedAt: Date;
+  getOrderUser(): Promise<{
+    email?: string;
+    name?: string;
+    [key: string]: any;
+  }>;
 }
 
 const OrderItemSchema = new Schema(
@@ -84,6 +82,11 @@ const OrderSchema = new Schema<IOrderDocument>(
       ref: "User",
       index: true,
     },
+    userModel: {
+      type: String,
+      enum: ["User", "Guest"],
+      default: "User",
+    },
     orderNumber: {
       type: String,
       required: true,
@@ -102,16 +105,8 @@ const OrderSchema = new Schema<IOrderDocument>(
     },
     status: {
       type: String,
-      enum: [
-        "initialized",
-        "pending",
-        "processing",
-        "in_progress",
-        "ready_for_pickup",
-        "completed",
-        "cancelled",
-      ],
-      default: "initialized",
+      enum: Object.keys(OrderStatusEnum),
+      default: "draft",
     },
     subtotal: { type: Number, required: true, min: 0 },
     deliveryFee: { type: Number, default: 0, min: 0 },
@@ -132,10 +127,6 @@ const OrderSchema = new Schema<IOrderDocument>(
       ref: "Payment",
     },
     notes: String,
-    isGuest: { type: Boolean, default: false },
-    guestEmail: String,
-    guestPhone: String,
-    guestId: String,
   },
   {
     timestamps: true,
@@ -147,6 +138,19 @@ OrderSchema.index({ orderNumber: 1 }, { unique: true });
 OrderSchema.index({ userId: 1, createdAt: -1 });
 OrderSchema.index({ status: 1, createdAt: -1 });
 OrderSchema.index({ createdAt: -1 });
+
+OrderSchema.methods.getOrderUser = async function (this: IOrderDocument) {
+  let user;
+  if (this.userModel === "User") {
+    user = await User.findById(this.userId);
+  } else {
+    user = await Guest.findById(this.userId);
+  }
+  if (!user) {
+    throw new Error("User not found");
+  }
+  return user;
+};
 
 const Order =
   (mongoose.models.Order as mongoose.Model<IOrderDocument>) ||

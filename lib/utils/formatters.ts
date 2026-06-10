@@ -2,20 +2,28 @@
 /*  Formatting utilities — currency, dates, etc.   */
 /* ============================================== */
 
-/**
- * Format a number as Nigerian Naira currency.
- */
+// import { getCurrencySymbol } from "@/currencies";
 
+/**
+ * Format a number as a currency string.
+ * Pass `currency` explicitly from wherever settings are available.
+ * — In client components: use `formatMoney()` from `useStoreSettings()`.
+ * — In server components: call `getStoreSettings()` then pass `settings.currency`.
+ */
 export function formatCurrency(
   amount: number,
-  currency: string = "NGN",
+  currencySymbol: string = "$",
 ): string {
-  return new Intl.NumberFormat("en-NG", {
-    style: "currency",
-    currency,
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  }).format(amount);
+  // const currencySymbol = getCurrencySymbol(currency)
+  // const formattedCurrency = new Intl.NumberFormat("en-NG", {
+  //   style: "currency",
+  //   currency: currencySymbol,
+  //   minimumFractionDigits: 0,
+  //   maximumFractionDigits: 2,
+  // }).format(amount);
+
+  const matchedCurrency = `${currencySymbol}${formatNumber(amount)}`;
+  return matchedCurrency;
 }
 
 /**

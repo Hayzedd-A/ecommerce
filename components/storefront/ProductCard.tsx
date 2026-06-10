@@ -1,16 +1,17 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { ShoppingCart, Heart, Star, Sparkles } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 import { useAppDispatch, useAppSelector } from "@/lib/store/hooks";
 import { addToCart } from "@/lib/store/slices/cartSlice";
-import { toggleWishlist } from "@/lib/store/slices/wishlistSlice";
-import { formatCurrency } from "@/lib/utils/formatters";
+import { toggleWishlistServer } from "@/lib/store/slices/wishlistSlice";
 import { cn } from "@/lib/utils/helpers";
 import { Card } from "../ui/Card";
+import VariantSelectionModal from "./VariantSelectionModal";
+import { useStoreSettings } from "../providers/SettingsProvider";
 
 interface ProductCardProps {
   product: {
@@ -24,21 +25,31 @@ interface ProductCardProps {
     reviewCount?: number;
     stock: number;
     isFeatured?: boolean;
+    variants?: any[];
   };
 }
 
 export default function ProductCard({ product }: ProductCardProps) {
   const dispatch = useAppDispatch();
   const wishlistItems = useAppSelector((state) => state.wishlist.items);
+  const { formatMoney } = useStoreSettings();
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const isWishlisted = wishlistItems.some((id) => id === product._id);
+  const isWishlisted = wishlistItems.some((item) => item._id === product._id);
   const primaryImage = product.images?.[0]?.url || "";
+
+  const hasVariants = product.variants && product.variants.length > 0;
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent navigating to detail page on button click
 
-    if (product.stock < 1) {
+    if (product.stock < 1 && !hasVariants) {
       toast.error("This product is out of stock");
+      return;
+    }
+
+    if (hasVariants) {
+      setIsModalOpen(true);
       return;
     }
 
@@ -57,7 +68,7 @@ export default function ProductCard({ product }: ProductCardProps) {
 
   const handleWishlistToggle = (e: React.MouseEvent) => {
     e.preventDefault();
-    dispatch(toggleWishlist(product._id));
+    dispatch(toggleWishlistServer(product));
     if (isWishlisted) {
       toast.success("Removed from wishlist");
     } else {
@@ -171,15 +182,15 @@ export default function ProductCard({ product }: ProductCardProps) {
             {hasDiscount ? (
               <>
                 <span className="text-xs text-muted line-through">
-                  {formatCurrency(product.price)}
+                  {formatMoney(product.price)}
                 </span>
                 <span className="text-base font-bold text-foreground">
-                  {formatCurrency(product.discountPrice!)}
+                  {formatMoney(product.discountPrice!)}
                 </span>
               </>
             ) : (
               <span className="text-base font-bold text-foreground">
-                {formatCurrency(product.price)}
+                {formatMoney(product.price)}
               </span>
             )}
           </div>
@@ -199,6 +210,13 @@ export default function ProductCard({ product }: ProductCardProps) {
           </button>
         </div>
       </div>
+
+      <VariantSelectionModal
+        open={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        product={product}
+        variants={product.variants || []}
+      />
     </Card>
   );
 }

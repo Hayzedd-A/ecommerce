@@ -44,6 +44,19 @@ export async function GET(req: NextRequest) {
           deliveryLocation: { $arrayElemAt: ["$deliveryLocation", 0] },
         },
       },
+      {
+        $lookup: {
+          from: "coupons",
+          localField: "couponUsed",
+          foreignField: "code",
+          as: "coupon",
+        },
+      },
+      {
+        $addFields: {
+          coupon: { $arrayElemAt: ["$coupon", 0] },
+        },
+      },
       // {
       //   $unset: "payment",         // remove the full payment array, keep only paymentStatus
       // },

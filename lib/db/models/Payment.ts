@@ -12,8 +12,11 @@ export interface IPaymentDocument extends Document {
     | "paid"
     | "failed"
     | "expired"
-    | "reversed";
+    | "reversed"
+    | "refunded";
   metadata?: Record<string, unknown>;
+  adminVerified?: boolean;
+  adminAction?: string;
   webhookVerified: boolean;
   providerReference?: string;
   evidenceFile: string;
@@ -50,7 +53,15 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     },
     status: {
       type: String,
-      enum: ["initialized", "pending", "paid", "failed", "expired", "reversed"],
+      enum: [
+        "initialized",
+        "pending",
+        "paid",
+        "failed",
+        "expired",
+        "reversed",
+        "refunded",
+      ],
       default: "initialized",
     },
     evidenceFile: {
@@ -59,6 +70,15 @@ const PaymentSchema = new Schema<IPaymentDocument>(
     },
     metadata: {
       type: Schema.Types.Mixed,
+    },
+    adminAction: {
+      type: String,
+      enum: ["pending", "verified", "declined"],
+      default: "pending",
+    },
+    adminVerified: {
+      type: Boolean,
+      default: false,
     },
     webhookVerified: {
       type: Boolean,

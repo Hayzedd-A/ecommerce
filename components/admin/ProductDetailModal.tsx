@@ -1,3 +1,5 @@
+"use client";
+
 import { IProduct } from "@/lib/types";
 import {
   Dialog,
@@ -16,10 +18,10 @@ import {
   XCircle,
 } from "lucide-react";
 import { ProductStatusBadge } from "../ui/ProductStatusBadge";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { calcDiscountPercent, cn } from "@/lib/utils/helpers";
 import { Button } from "../ui/Button";
 import Link from "next/link";
+import { useStoreSettings } from "../providers/SettingsProvider";
 
 export function ProductDetailModal({
   product,
@@ -30,6 +32,7 @@ export function ProductDetailModal({
   open: boolean;
   onClose: () => void;
 }) {
+  const { formatMoney } = useStoreSettings();
   if (!product) return null;
 
   const hasDiscount =
@@ -109,7 +112,7 @@ export function ProductDetailModal({
               <div className="bg-surface-secondary rounded-xl p-4 border border-border">
                 <p className="text-xs text-muted-foreground mb-1">Base Price</p>
                 <p className="text-lg font-bold text-foreground">
-                  {formatCurrency(product.price)}
+                  {formatMoney(product.price)}
                 </p>
               </div>
               {hasDiscount && (
@@ -118,7 +121,7 @@ export function ProductDetailModal({
                     Discount Price
                   </p>
                   <p className="text-lg font-bold text-emerald-900 dark:text-emerald-300">
-                    {formatCurrency(product.discountPrice!)}
+                    {formatMoney(product.discountPrice!)}
                   </p>
                   <p className="text-xs text-emerald-500 mt-0.5">
                     –
@@ -237,7 +240,7 @@ export function ProductDetailModal({
                     </div>
                     <div className="flex items-center gap-4 text-sm shrink-0">
                       <span className="font-semibold text-primary-500">
-                        {formatCurrency(v.price)}
+                        {formatMoney(v.price)}
                       </span>
                       <span className="text-muted-foreground">
                         Stock: {v.stock}

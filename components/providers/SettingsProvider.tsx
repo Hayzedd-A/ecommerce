@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import apiClient from "@/lib/api/client";
 import { IStoreSettings } from "@/lib/types";
 import { formatCurrency } from "@/lib/utils/formatters";
+import { getCurrencySymbol } from "@/currencies";
 
 interface SettingsContextValue extends IStoreSettings {
   // settings: IStoreSettings | null;
@@ -13,6 +14,9 @@ interface SettingsContextValue extends IStoreSettings {
   isError: boolean;
   error: unknown;
   refetchSettings: () => Promise<void>;
+  updateStoreSettings: (
+    updatedSettings: Partial<IStoreSettings>,
+  ) => Promise<void>;
 }
 
 const SettingsContext = createContext<SettingsContextValue | undefined>(
@@ -48,32 +52,26 @@ export default function SettingsProvider({
     initialData: initialSettings ?? undefined,
   });
 
-  function getSymbol(currencyCode: string) {
-    // the api doesn't return the currency symbol for NGN, so we hardcode it for now
-    if (currencyCode.toUpperCase() === "NGN") return "₦";
-
-    const formatter = new Intl.NumberFormat("en", {
-      style: "currency",
-      currency: currencyCode,
-    });
-
-    // Extract the symbol part
-    const parts = formatter.formatToParts();
-    const symbolPart = parts.find((part) => part.type === "currency");
-    return symbolPart ? symbolPart.value : null;
-  }
-
-  const currencySymbol = getSymbol(data ? data.currency : "NGN") || "₦";
-
   const formatMoney = (amount: number) =>
-    formatCurrency(amount, data?.currency || "NGN");
+    formatCurrency(amount, data?.currencySymbol);
+
+  const updateStoreSettings = async (
+    updatedSettings: Partial<IStoreSettings>,
+  ) => {
+    try {
+      const response = await apiClient.put("/admin/settings", updatedSettings);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to update settings:", error);
+      throw error;
+    }
+  };
 
   return (
     <SettingsContext.Provider
       value={
         {
           ...(data || {}),
-          currencySymbol,
           formatMoney,
           isLoading: isLoading,
           isError: isError,
@@ -81,6 +79,7 @@ export default function SettingsProvider({
           refetchSettings: async () => {
             await refetch();
           },
+          updateStoreSettings,
         } as SettingsContextValue
       }
     >

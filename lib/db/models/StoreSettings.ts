@@ -1,3 +1,4 @@
+import { CheckoutMethod } from "@/lib/utils/constants";
 import mongoose, { Schema, type Document } from "mongoose";
 
 export interface IStoreSettingsDocument extends Document {
@@ -45,13 +46,14 @@ export interface IStoreSettingsDocument extends Document {
   pickupAddress?: string;
   currency: string;
   currencySymbol: string;
+  categoryView: "text" | "image";
   checkoutMethod: {
     allowGuestCheckout: boolean;
     acceptOnlinePayment: boolean;
     acceptCashOnDelivery: boolean;
     acceptBankTransfer: boolean;
     acceptWhatsappOrder: boolean;
-    defaultCheckoutMethod: "online" | "cash" | "bank" | "whatsapp";
+    defaultCheckoutMethod: typeof CheckoutMethod[number];
   };
   personalAccount: {
     bankName: string;
@@ -70,6 +72,17 @@ export interface IStoreSettingsDocument extends Document {
       secretKey: string;
       publicKey: string;
     };
+  };
+  heroContent?: {
+    title?: string;
+    subtitle?: string;
+    buttonText?: string;
+    buttonLink?: string;
+  };
+  aboutUs?: {
+    title?: string;
+    content?: string;
+    showAboutUsPage: boolean;
   };
   updatedAt: Date;
 }
@@ -140,6 +153,11 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       type: String,
       default: "₦",
     },
+    categoryView: {
+      type: String,
+      enum: ["text", "image"],
+      default: "text",
+    },
     checkoutMethod: {
       allowGuestCheckout: {
         type: Boolean,
@@ -163,8 +181,8 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       },
       defaultCheckoutMethod: {
         type: String,
-        enum: ["online", "cash", "bank", "whatsapp"],
-        default: "whatsapp",
+        enum: [...CheckoutMethod],
+        default: CheckoutMethod[0],
       },
     },
     personalAccount: {
@@ -190,6 +208,20 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       paystack: {
         secretKey: String,
         publicKey: String,
+      },
+    },
+    heroContent: {
+      title: String,
+      subtitle: String,
+      buttonText: String,
+      buttonLink: String,
+    },
+    aboutUs: {
+      title: String,
+      content: String,
+      showAboutUsPage: {
+        type: Boolean,
+        default: true,
       },
     },
   },

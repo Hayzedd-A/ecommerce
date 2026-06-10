@@ -21,9 +21,13 @@ import {
   Search,
   Building2,
   Share2,
+  Layout,
+  Info,
 } from "lucide-react";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
 import { Toggle } from "@/components/ui/Toggle";
+import { MenuItem, Select } from "@mui/material";
+import { CURRENCIES } from "@/currencies";
 
 /* ─── Zod Schema ──────────────────────────────────────────────────────────── */
 
@@ -112,6 +116,19 @@ const settingsSchema = z.object({
       secretKey: z.string().optional().or(z.literal("")),
     }),
   }),
+
+  heroContent: z.object({
+    title: z.string().max(100).optional().or(z.literal("")),
+    subtitle: z.string().max(300).optional().or(z.literal("")),
+    buttonText: z.string().max(50).optional().or(z.literal("")),
+    buttonLink: z.string().max(200).optional().or(z.literal("")),
+  }),
+
+  aboutUs: z.object({
+    title: z.string().max(100).optional().or(z.literal("")),
+    content: z.string().max(5000).optional().or(z.literal("")),
+    showAboutUsPage: z.boolean(),
+  }),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
@@ -173,6 +190,17 @@ const DEFAULT_VALUES: SettingsForm = {
       baseUrl: "https://sandbox.monnify.com",
     },
     paystack: { publicKey: "", secretKey: "" },
+  },
+  heroContent: {
+    title: "",
+    subtitle: "",
+    buttonText: "",
+    buttonLink: "",
+  },
+  aboutUs: {
+    title: "",
+    content: "",
+    showAboutUsPage: true,
   },
 };
 
@@ -268,6 +296,14 @@ export default function AdminSettingsPage() {
             ...DEFAULT_VALUES.personalAccount,
             ...data.personalAccount,
           },
+          heroContent: {
+            ...DEFAULT_VALUES.heroContent,
+            ...data.heroContent,
+          },
+          aboutUs: {
+            ...DEFAULT_VALUES.aboutUs,
+            ...data.aboutUs,
+          },
           paymentSettings: {
             ...DEFAULT_VALUES.paymentSettings,
             ...data.paymentSettings,
@@ -351,12 +387,22 @@ export default function AdminSettingsPage() {
             />
           </div>
           <div>
-            <Input
-              label="Currency Code"
-              placeholder="NGN"
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              Currency Code
+            </label>
+            <select
               {...register("currency")}
-              error={errors.currency?.message}
-            />
+              className="w-full rounded-lg border border-border bg-input-bg px-4 py-2.5 text-foreground outline-none focus:border-primary-500 focus:ring-4 focus:ring-ring transition-all"
+            >
+              {CURRENCIES.map((currency, ind) => (
+                <option
+                  key={`${currency.country}-${ind}`}
+                  value={currency.currencyCode}
+                >
+                  {currency.country} - ({currency.symbol})
+                </option>
+              ))}
+            </select>
           </div>
           <div>
             <Input
@@ -671,7 +717,84 @@ export default function AdminSettingsPage() {
         </div>
       </Card>
 
-      {/* ── 9. Payment Gateway Settings ── */}
+      {/* ── 9. Hero Section ── */}
+      <Card className="p-6" glass>
+        <SectionHeader
+          icon={<Layout size={18} />}
+          title="Hero Section"
+          subtitle="Customize the main banner text on your homepage"
+        />
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Input
+            label="Hero Title"
+            placeholder="Welcome to our Store"
+            {...register("heroContent.title")}
+            error={errors.heroContent?.title?.message}
+          />
+          <Input
+            label="Hero Subtitle"
+            placeholder="Discover amazing products at the best prices"
+            {...register("heroContent.subtitle")}
+            error={errors.heroContent?.subtitle?.message}
+          />
+          <Input
+            label="Button Text"
+            placeholder="Shop Now"
+            {...register("heroContent.buttonText")}
+            error={errors.heroContent?.buttonText?.message}
+          />
+          <Input
+            label="Button Link"
+            placeholder="/products"
+            {...register("heroContent.buttonLink")}
+            error={errors.heroContent?.buttonLink?.message}
+          />
+        </div>
+      </Card>
+
+      {/* ── 10. About Us Section ── */}
+      <Card className="p-6" glass>
+        <SectionHeader
+          icon={<Info size={18} />}
+          title="About Us"
+          subtitle="Content for your 'About Us' page"
+        />
+        <div className="grid gap-5">
+          <div className="flex items-center justify-between mb-2">
+            <Controller
+              control={control}
+              name="aboutUs.showAboutUsPage"
+              render={({ field }) => (
+                <Toggle
+                  checked={field.value}
+                  onChange={field.onChange}
+                  label="Show About Us page link in footer"
+                />
+              )}
+            />
+          </div>
+          <Input
+            label="About Us Heading"
+            placeholder="About Our Store"
+            {...register("aboutUs.title")}
+            error={errors.aboutUs?.title?.message}
+          />
+          <div>
+            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground block mb-1.5">
+              About Us Content
+            </label>
+            <textarea
+              {...register("aboutUs.content")}
+              rows={10}
+              placeholder="Tell your story..."
+              className="w-full rounded-lg border border-border bg-input-bg px-4 py-3 text-foreground placeholder:text-muted outline-none focus:border-primary-500 focus:ring-4 focus:ring-ring transition-all"
+            />
+            <FieldError message={errors.aboutUs?.content?.message} />
+          </div>
+        </div>
+      </Card>
+
+      {/* ── 11. Payment Gateway Settings ── */}
       <Card className="p-6" glass>
         <SectionHeader
           icon={<CreditCard size={18} />}

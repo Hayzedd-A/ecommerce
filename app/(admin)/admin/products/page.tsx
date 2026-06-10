@@ -12,14 +12,8 @@ import {
   Star,
   TrendingUp,
   Package,
-  ShoppingCart,
-  Tag,
   Layers,
-  ChevronUp,
-  ChevronDown,
   X,
-  CheckCircle2,
-  XCircle,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -38,7 +32,6 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Chip,
   Tooltip,
   IconButton,
   Divider,
@@ -48,20 +41,18 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import apiClient from "@/lib/api/client";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { toast } from "react-hot-toast";
 import { NestedVariantManager } from "@/components/admin/NestedVariantManager";
 import { IProduct } from "@/lib/types";
-import { calcDiscountPercent, cn } from "@/lib/utils/helpers";
+import { cn } from "@/lib/utils/helpers";
 import { ProductStatusBadge } from "@/components/ui/ProductStatusBadge";
 import { ProductDetailModal } from "@/components/admin/ProductDetailModal";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 // ─── Types ─────────────────────────────────────────────────────────────────
 
 type SortField = "price" | "avgRating" | "salesCount" | "stock" | "createdAt";
 type SortDir = "asc" | "desc";
-
-// ─── Status Badge ───────────────────────────────────────────────────────────
 
 // ─── Stock Indicator ─────────────────────────────────────────────────────────
 
@@ -326,6 +317,7 @@ export default function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [sortField, setSortField] = useState<SortField>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const { formatMoney } = useStoreSettings();
 
   // Modals
   const [viewProduct, setViewProduct] = useState<IProduct | null>(null);
@@ -549,12 +541,12 @@ export default function AdminProductsPage() {
                     <TableCell sx={bodyCellSx}>
                       <div>
                         <p className="text-sm font-semibold text-foreground">
-                          {formatCurrency(product.price)}
+                          {formatMoney(product.price)}
                         </p>
                         {product.discountPrice &&
                           product.discountPrice < product.price && (
                             <p className="text-xs text-emerald-500 font-medium">
-                              {formatCurrency(product.discountPrice)}
+                              {formatMoney(product.discountPrice)}
                             </p>
                           )}
                       </div>
@@ -675,7 +667,8 @@ export default function AdminProductsPage() {
         >
           <div className="flex items-center justify-between">
             <span className="font-bold text-foreground">
-              Manage Variants — {manageVariant?.name}
+              Manage Variants — {manageVariant?.name} (
+              {formatMoney(manageVariant?.price || 0)})
             </span>
             <IconButton size="small" onClick={() => setManageVariant(null)}>
               <X className="h-4 w-4" />

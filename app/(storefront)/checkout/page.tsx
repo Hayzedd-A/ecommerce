@@ -7,7 +7,6 @@ import { useRouter, useSearchParams } from "next/navigation";
 import {
   ShoppingBag,
   CreditCard,
-  Shield,
   Truck,
   MapPin,
   Package,
@@ -15,14 +14,15 @@ import {
   CheckCircle,
   XCircle,
   AlertTriangle,
-  BanknoteArrowDown,
-  BanknoteArrowUp,
 } from "lucide-react";
 import { toast } from "react-hot-toast";
 
-import { CheckoutSchema, CheckoutInput } from "@/lib/validators/order.schema";
+import {
+  CheckoutSchema,
+  CheckoutInput,
+  CheckoutFormInput,
+} from "@/lib/validators/order.schema";
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { clearCart } from "@/lib/store/slices/cartSlice";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
@@ -30,13 +30,14 @@ import { Card } from "@/components/ui/Card";
 import apiClient from "@/lib/api/client";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
 import BankTransferModal from "@/components/storefront/BankTransferModal";
-import { IDeliveryLocationDocument } from "@/lib/db/models/DeliveryLocation";
 import { IDeliveryLocation } from "@/lib/types";
-import { SocialIcon } from "react-social-icons";
+import { CheckoutMethod } from "@/lib/utils/constants";
+import CheckoutConfirmationModal from "@/components/storefront/CheckoutConfirmationModal";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { formatMoney } = useStoreSettings();
   const dispatch = useAppDispatch();
   const { deliveryEnabled, pickupEnabled, checkoutMethod } = useStoreSettings();
 
@@ -81,6 +82,30 @@ export default function CheckoutPage() {
   const [verificationMessage, setVerificationMessage] = useState("");
   const [showVerificationModal, setShowVerificationModal] = useState(false);
   const [showBankModal, setShowBankModal] = useState(false);
+  const [activeBankRef, setActiveBankRef] = useState<string | null>(null);
+  const [bankTransferTotal, setBankTransferTotal] = useState<number>(0);
+
+  useEffect(() => {
+    const ref = searchParams.get("ref");
+    if (ref) {
+      setActiveBankRef(ref);
+      setShowBankModal(true);
+      // Fetch payment amount if we have a ref
+      apiClient.get(`/payments?reference=${ref}`).then((res) => {
+        if (res.data.success && res.data.payment) {
+          setBankTransferTotal(res.data.payment.amount);
+        }
+      });
+    } else {
+      setActiveBankRef(null);
+      setShowBankModal(false);
+    }
+  }, [searchParams]);
+
+  const [selectedCheckoutMethod, setSelectedCheckoutMethod] = useState<
+    (typeof CheckoutMethod)[number]
+  >(checkoutMethod?.defaultCheckoutMethod || "online");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
 
   const {
     register,
@@ -88,7 +113,7 @@ export default function CheckoutPage() {
     setValue,
     getValues,
     formState: { errors },
-  } = useForm<CheckoutInput>({
+  } = useForm<CheckoutFormInput>({
     resolver: zodResolver(CheckoutSchema),
     defaultValues: {
       isGuest: !isAuthenticated,
@@ -99,7 +124,6 @@ export default function CheckoutPage() {
         city: "",
         state: "",
         country: "Nigeria",
-        zipCode: "",
       },
       items: [],
       deliveryLocationId: "",
@@ -114,16 +138,19 @@ export default function CheckoutPage() {
   }: {
     paymentRef?: string | null;
     file?: File | null;
-    checkoutMethod: "bank_transfer" | "pay_on_delivery";
+    checkoutMethod?: (typeof CheckoutMethod)[number];
   }) => {
-    const data = getValues();
-    if (!data || !data.items || data.items.length === 0) {
-      toast.error("Cart is empty");
-      return;
-    }
     try {
+      const data = { ...getValues(), checkoutMethod };
+      const isValid = CheckoutSchema.safeParse(data);
+      console.log(data, isValid);
+
+      if (!isValid.success) {
+        toast.error(isValid.error.message);
+        return;
+      }
       // 1. Create order (bank transfer, payment on delivery)
-      const payload = { ...data, paymentRef, checkoutMethod };
+      const payload = { ...data, paymentRef };
       const createRes = await apiClient.post("/orders", payload);
       if (!createRes.data?.success) {
         throw new Error(createRes.data?.message || "Failed to create order");
@@ -134,13 +161,10 @@ export default function CheckoutPage() {
       if (file) {
         const fd = new FormData();
         fd.append("file", file);
-        const uploadRes = await apiClient.post(
-          `/orders/${orderId}/evidence`,
-          fd,
-          {
-            headers: { "Content-Type": "multipart/form-data" },
-          },
-        );
+        fd.append("reference", paymentRef as string);
+        const uploadRes = await apiClient.post(`/payments/evidence`, fd, {
+          headers: { "Content-Type": "multipart/form-data" },
+        });
         if (!uploadRes.data?.success) {
           throw new Error(uploadRes.data?.message || "Upload failed");
         }
@@ -161,6 +185,73 @@ export default function CheckoutPage() {
     }
   };
 
+  const validateAndOpenConfirm = () => {
+    const validationResult = CheckoutSchema.safeParse(getValues());
+    if (validationResult.success) {
+      setShowConfirmModal(true);
+    }
+    if (validationResult.error) {
+      toast.error(validationResult.error.issues[0].message);
+    }
+  };
+
+  const submitOrder = async () => {
+    setShowConfirmModal(false);
+    setIsLoading((prev) => ({ ...prev, placeOrder: true }));
+    try {
+      const data = { ...getValues(), checkoutMethod: selectedCheckoutMethod };
+      const isValid = CheckoutSchema.safeParse(data);
+      if (!isValid.success) {
+        toast.error(isValid.error.message);
+        return;
+      }
+
+      const payload = {
+        ...data,
+        deliveryMethod,
+        deliveryLocationId: selectedDeliveryLocation?._id,
+        deliveryFee: selectedDeliveryLocation?.price,
+        discount: couponDiscount,
+        couponUsed: couponDiscount > 0 ? couponCode.toUpperCase() : undefined,
+        total:
+          subtotal + (selectedDeliveryLocation?.price ?? 0) - couponDiscount,
+        subtotal,
+      };
+
+      const response = await apiClient.post("/payments/initialize", payload);
+      const resData = response.data;
+
+      if (resData.success) {
+        toast.success(resData.message || "Order processing...");
+        if (resData.checkoutUrl) {
+          router.push(resData.checkoutUrl);
+        } else if (selectedCheckoutMethod === "bank_transfer") {
+          // Update URL to persist state and open bank modal
+          router.push(
+            `/checkout?ref=${encodeURIComponent(resData.paymentReference || "")}`,
+            { scroll: false },
+          );
+        } else {
+          // For other non-online flows (pay_on_delivery, whatsapp)
+          dispatch(clearCart());
+          router.push(
+            `/checkout/success?ref=${encodeURIComponent(
+              resData.paymentReference || "",
+            )}`,
+          );
+        }
+      } else {
+        toast.error(resData.message || "Failed to process order");
+      }
+    } catch (error: any) {
+      toast.error(
+        error.response?.data?.error || "Something went wrong during checkout.",
+      );
+    } finally {
+      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
+    }
+  };
+
   const handleCompleteBankTransfer = async ({
     ref,
     file,
@@ -168,29 +259,41 @@ export default function CheckoutPage() {
     ref: string | null;
     file: File | null;
   }) => {
-    // dispatch(clearCart());
     try {
-      if (ref) {
-        const res = await handleCreateOrder({
-          checkoutMethod: "bank_transfer",
-          file,
-          paymentRef: ref,
-        });
-        if (res?.success) {
-          router.push(`/checkout/success?ref=${encodeURIComponent(ref)}`);
-        } else {
-          toast.error(res?.message || "Failed to place order");
-        }
+      if (!ref || !file) return;
+
+      setIsLoading((prev) => ({ ...prev, placeOrder: true }));
+
+      const fd = new FormData();
+      fd.append("file", file);
+      fd.append("reference", ref);
+
+      const uploadRes = await apiClient.post("/payments/evidence", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+
+      if (uploadRes.data?.success) {
+        dispatch(clearCart());
+        router.push(`/checkout/success?ref=${encodeURIComponent(ref)}`);
+      } else {
+        throw new Error(uploadRes.data?.message || "Upload failed");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error in handleCompleteBankTransfer:", error);
-      throw error;
+      toast.error(
+        error.response?.data?.error ||
+          error.message ||
+          "Failed to submit payment proof",
+      );
+    } finally {
+      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
     }
   };
 
   const handlePayOnDelivery = async () => {
     try {
       setIsLoading((prev) => ({ ...prev, payOnDelivery: true }));
+      setValue("checkoutMethod", "pay_on_delivery");
       const res = await handleCreateOrder({
         checkoutMethod: "pay_on_delivery",
       });
@@ -535,6 +638,7 @@ export default function CheckoutPage() {
         });
         const { discount, code } = res.data.data;
         setCouponDiscount(Number(discount) || 0);
+        setValue("couponUsed", code || couponCode.toUpperCase());
         setCouponCode((code || couponCode).toString().toUpperCase());
         toast.success(`Coupon ${code || couponCode} applied.`);
       } else {
@@ -550,6 +654,7 @@ export default function CheckoutPage() {
     }
   };
 
+  // online checkout method
   const handlePlaceOrder = async (data: CheckoutInput) => {
     setIsLoading((prev) => ({ ...prev, placeOrder: true }));
     try {
@@ -581,8 +686,7 @@ export default function CheckoutPage() {
       }
     } catch (error: any) {
       toast.error(
-        error.response?.data?.message ||
-          "Something went wrong during checkout.",
+        error.response?.data?.error || "Something went wrong during checkout.",
       );
     } finally {
       setIsLoading((prev) => ({ ...prev, placeOrder: false }));
@@ -611,12 +715,7 @@ export default function CheckoutPage() {
           <div className="lg:col-span-7 space-y-6">
             <Card className="p-6 md:p-8" glass>
               <form
-                onSubmit={handleSubmit(handlePlaceOrder, (formError) => {
-                  console.log("Validation errors:", formError);
-                  toast.error(
-                    "Please fix the highlighted errors and try again.",
-                  );
-                })}
+                onSubmit={handleSubmit(() => validateAndOpenConfirm())}
                 className="space-y-6"
               >
                 {/* Section 1 – Shipping */}
@@ -703,6 +802,7 @@ export default function CheckoutPage() {
                           type="button"
                           onClick={() => {
                             setValue("deliveryMethod", "delivery");
+                            setValue("deliveryLocationId", "");
                             setDeliveryMethod("delivery");
                           }}
                           className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
@@ -727,6 +827,7 @@ export default function CheckoutPage() {
                               const selected =
                                 prev === "delivery" ? "pickup" : "delivery";
                               setValue("deliveryMethod", selected);
+                              setValue("deliveryLocationId", "");
                               return selected;
                             });
                           }}
@@ -765,6 +866,7 @@ export default function CheckoutPage() {
                           onClick={() => {
                             setDeliveryMethod("pickup");
                             setValue("deliveryMethod", "pickup");
+                            setValue("deliveryLocationId", "");
                           }}
                           className={`flex items-center gap-1.5 text-sm font-semibold transition-colors ${
                             deliveryMethod === "pickup"
@@ -819,6 +921,7 @@ export default function CheckoutPage() {
                               onClick={() => {
                                 setSelectedDeliveryLocationId(location._id);
                                 setSelectedDeliveryLocation(location);
+                                setValue("deliveryLocationId", location._id);
                               }}
                               className={`flex flex-col gap-2 w-full rounded-2xl border p-4 text-left transition ${
                                 selectedDeliveryLocationId === location._id
@@ -842,7 +945,7 @@ export default function CheckoutPage() {
                                   </div>
                                 </div>
                                 <span className="text-sm font-black text-primary-500 whitespace-nowrap">
-                                  {formatCurrency(location.price)}
+                                  {formatMoney(location.price)}
                                 </span>
                               </div>
                               <div className="text-xs text-muted-foreground flex flex-wrap gap-2">
@@ -991,73 +1094,93 @@ export default function CheckoutPage() {
                 )}
                 {/* Payment & Submit */}
                 <div className="pt-6 border-t border-border/80 space-y-4">
-                  <>
-                    <div className="flex items-center gap-2">
+                  <div className="space-y-3">
+                    <label className="text-sm font-medium">
+                      Payment method
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       {checkoutMethod.acceptOnlinePayment && (
-                        <Button
-                          type="submit"
-                          variant="primary"
-                          className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                          isLoading={isLoading.placeOrder}
-                          leftIcon={<CreditCard className="h-5 w-5" />}
-                        >
-                          Pay Now {formatCurrency(totalAmount)}
-                        </Button>
+                        <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer">
+                          <input
+                            type="radio"
+                            name="checkoutMethod"
+                            value="online"
+                            checked={selectedCheckoutMethod === "online"}
+                            onChange={() => setSelectedCheckoutMethod("online")}
+                          />
+                          <span className="font-medium">Online Payment</span>
+                        </label>
                       )}
                       {checkoutMethod.acceptCashOnDelivery && (
-                        <Button
-                          type="button"
-                          variant="primary"
-                          className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                          isLoading={isLoading.payOnDelivery}
-                          leftIcon={<CreditCard className="h-5 w-5" />}
-                          onClick={handlePayOnDelivery}
-                        >
-                          Pay on Delivery {formatCurrency(totalAmount)}
-                        </Button>
+                        <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer">
+                          <input
+                            type="radio"
+                            name="checkoutMethod"
+                            value="pay_on_delivery"
+                            checked={
+                              selectedCheckoutMethod === "pay_on_delivery"
+                            }
+                            onChange={() =>
+                              setSelectedCheckoutMethod("pay_on_delivery")
+                            }
+                          />
+                          <span className="font-medium">Pay on Delivery</span>
+                        </label>
+                      )}
+                      {checkoutMethod.acceptBankTransfer && (
+                        <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer">
+                          <input
+                            type="radio"
+                            name="checkoutMethod"
+                            value="bank_transfer"
+                            checked={selectedCheckoutMethod === "bank_transfer"}
+                            onChange={() =>
+                              setSelectedCheckoutMethod("bank_transfer")
+                            }
+                          />
+                          <span className="font-medium">Bank Transfer</span>
+                        </label>
+                      )}
+                      {checkoutMethod.acceptWhatsappOrder && (
+                        <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer">
+                          <input
+                            type="radio"
+                            name="checkoutMethod"
+                            value="whatsapp"
+                            checked={selectedCheckoutMethod === "whatsapp"}
+                            onChange={() =>
+                              setSelectedCheckoutMethod("whatsapp")
+                            }
+                          />
+                          <span className="font-medium">Send via WhatsApp</span>
+                        </label>
                       )}
                     </div>
-                    {checkoutMethod.acceptBankTransfer && (
-                      <Button
-                        type="button"
-                        variant="primary"
-                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                        onClick={() => {
-                          setShowBankModal(true);
-                        }}
-                        leftIcon={<BanknoteArrowUp className="h-5 w-5" />}
-                      >
-                        Pay via Bank Transfer {formatCurrency(totalAmount)}
-                      </Button>
-                    )}
-                    {/* <div className="flex items-start gap-3 p-3 bg-surface-secondary border border-border rounded-xl text-xs text-muted-foreground">
-                      <Shield className="h-4 w-4 mt-0.5 text-primary-500 flex-shrink-0" />
-                      <span>
-                        Your payment will be secured and processed via our
-                        secure payment gateway. Your financial data is encrypted
-                        and completely private.
-                      </span>
-                    </div> */}
-                    {checkoutMethod.acceptWhatsappOrder && (
-                      <Button
-                        type="button"
-                        variant="green"
-                        className="w-full py-4 uppercase font-bold tracking-wider h-14"
-                        onClick={() => {}}
-                        leftIcon={
-                          <SocialIcon
-                            network="whatsapp"
-                            fgColor="green"
-                            bgColor="white"
-                            className="h-5 w-5"
-                            style={{ height: 32, width: 32 }}
-                          />
-                        }
-                      >
-                        Send Order to WhatsApp
-                      </Button>
-                    )}
-                  </>
+                  </div>
+
+                  <div>
+                    <Button
+                      type="button"
+                      variant="primary"
+                      className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                      onClick={validateAndOpenConfirm}
+                      isLoading={isLoading.placeOrder}
+                      leftIcon={<CreditCard className="h-5 w-5" />}
+                    >
+                      Confirm & Checkout {formatMoney(totalAmount)}
+                    </Button>
+                  </div>
+
+                  <CheckoutConfirmationModal
+                    open={showConfirmModal}
+                    onClose={() => setShowConfirmModal(false)}
+                    selectedCheckoutMethod={selectedCheckoutMethod}
+                    deliveryMethod={deliveryMethod}
+                    selectedDeliveryLocation={selectedDeliveryLocation}
+                    items={items}
+                    totalAmount={totalAmount}
+                    onSubmit={submitOrder}
+                  />
                 </div>
               </form>
             </Card>
@@ -1103,7 +1226,7 @@ export default function CheckoutPage() {
                           Qty: {item.quantity}
                         </span>
                         <span className="font-bold text-foreground">
-                          {formatCurrency(item.price * item.quantity)}
+                          {formatMoney(item.price * item.quantity)}
                         </span>
                       </div>
                     </div>
@@ -1148,25 +1271,25 @@ export default function CheckoutPage() {
               <div className="pt-6 border-t border-border mt-6 space-y-3 text-sm">
                 <div className="flex justify-between text-muted-foreground">
                   <span>Subtotal</span>
-                  <span>{formatCurrency(subtotal)}</span>
+                  <span>{formatMoney(subtotal)}</span>
                 </div>
                 <div className="flex justify-between text-muted-foreground">
                   <span>Delivery Fee </span>
                   <span>
                     {selectedDeliveryLocation?.price === 0
                       ? "Free"
-                      : formatCurrency(selectedDeliveryLocation?.price || 0)}
+                      : formatMoney(selectedDeliveryLocation?.price || 0)}
                   </span>
                 </div>
                 {couponDiscount > 0 && (
                   <div className="flex justify-between text-success-500 font-medium">
                     <span>Coupon Discount</span>
-                    <span>-{formatCurrency(couponDiscount)}</span>
+                    <span>-{formatMoney(couponDiscount)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-base font-black text-foreground pt-4 border-t border-border/80">
                   <span>Total Amount</span>
-                  <span>{formatCurrency(totalAmount)}</span>
+                  <span>{formatMoney(totalAmount)}</span>
                 </div>
               </div>
             </Card>
@@ -1174,9 +1297,12 @@ export default function CheckoutPage() {
         </div>
         <BankTransferModal
           open={showBankModal}
-          onClose={() => setShowBankModal(false)}
-          data={getValues()}
-          total={totalAmount}
+          onClose={() => {
+            setShowBankModal(false);
+            // Optionally clear ref from URL when closing?
+          }}
+          total={bankTransferTotal || totalAmount}
+          paymentRef={activeBankRef}
           onCompleted={handleCompleteBankTransfer}
         />
       </div>

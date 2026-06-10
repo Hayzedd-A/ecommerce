@@ -75,3 +75,5 @@ export const RATE_LIMIT = {
   api: { windowMs: 60 * 1000, max: 100 }, // 100 req / min
   upload: { windowMs: 60 * 1000, max: 20 }, // 20 req / min
 };
+
+export const CheckoutMethod = ["online" , "pay_on_delivery" , "bank_transfer" , "whatsapp"];

@@ -3,7 +3,54 @@
 /* ============================================== */
 
 import { clsx, type ClassValue } from "clsx";
-import { Payment } from "../db/models";
+import { OrderStatus, PaymentStatus } from "../types";
+
+export const orderStatusColors: Record<OrderStatus, string> = {
+  draft: "bg-info-50 text-info-600 border-info-100",
+  awaiting_confirmation: "bg-warning-50 text-warning-600 border-warning-100",
+  processing: "bg-primary-50 text-primary-600 border-primary-100",
+  in_progress: "bg-accent-50 text-accent-600 border-accent-100",
+  ready_for_pickup: "bg-slate-50 text-slate-600 border-slate-100",
+  delivered: "bg-success-50 text-success-600 border-success-100",
+  cancelled: "bg-error-50 text-error-600 border-error-100",
+};
+
+export const orderStatusLabels: Record<OrderStatus, string> = {
+  draft: "Draft",
+  awaiting_confirmation: "Awaiting Confirmation",
+  processing: "Processing",
+  in_progress: "In Progress",
+  ready_for_pickup: "Ready for Pickup",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
+
+export const orderStatusOptions: { label: string; value: OrderStatus }[] = [
+  { label: "Awaiting confirmation", value: "awaiting_confirmation" },
+  { label: "Processing", value: "processing" },
+  { label: "In progress", value: "in_progress" },
+  { label: "Ready for Pickup", value: "ready_for_pickup" },
+  { label: "Delivered", value: "delivered" },
+  { label: "Cancelled", value: "cancelled" },
+];
+
+export const paymentStatusColors: Record<PaymentStatus, string> = {
+  initialized: "bg-info-50 text-info-600 border-info-100",
+  pending: "bg-warning-50 text-warning-600 border-warning-100",
+  paid: "bg-success-50 text-success-600 border-success-100",
+  failed: "bg-error-50 text-error-600 border-error-100",
+  expired: "bg-error-50 text-error-600 border-error-100",
+  reversed: "bg-error-50 text-error-600 border-error-100",
+};
+
+export const paymentStatusLabels: Record<PaymentStatus, string> = {
+  initialized: "Initialized",
+  pending: "Pending",
+  paid: "Paid",
+  failed: "Failed",
+  expired: "Expired",
+  reversed: "Reversed",
+};
 
 /**
  * Merge Tailwind classes with clsx.

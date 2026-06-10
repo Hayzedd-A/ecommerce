@@ -109,12 +109,23 @@ export type ICategory = Omit<ICategoryDocument, "_id"> & {
 /* ---------- Order ---------- */
 
 export type OrderStatus =
-  | "pending"
+  | "draft"
+  | "awaiting_confirmation"
   | "processing"
   | "in_progress"
   | "ready_for_pickup"
-  | "completed"
+  | "delivered"
   | "cancelled";
+
+export const OrderStatusEnum = {
+  draft: "Draft",
+  awaiting_confirmation: "Awaiting Confirmation",
+  processing: "Processing",
+  in_progress: "In Progress",
+  ready_for_pickup: "Ready for Pickup",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+};
 
 export interface IOrderItem {
   _id: string;
@@ -145,6 +156,12 @@ export interface IOrder {
   guestPhone?: string;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface IOrderObject extends Omit<IOrder, "_id"> {
+  _id: string;
+  payment: IPayment;
+  deliveryLocation?: IDeliveryLocation;
 }
 
 /* ---------- Payment ---------- */

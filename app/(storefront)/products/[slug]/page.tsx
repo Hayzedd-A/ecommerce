@@ -5,103 +5,6 @@ import Product from "@/lib/db/models/Product";
 import ProductVariant from "@/lib/db/models/ProductVariant";
 import ProductDetailInteractive from "./ProductDetailInteractive";
 
-// Mock Fallbacks matching homepage slugs
-const MOCK_PRODUCTS_MAP: Record<string, any> = {
-  "wireless-headphones": {
-    _id: "prod1",
-    name: "Acoustic Noise Cancelling Wireless Headphones",
-    slug: "wireless-headphones",
-    description:
-      "Experience absolute acoustic bliss. Equipped with hybrid active noise cancellation, premium memory foam earcups, and high-fidelity dynamic drivers. Enjoy up to 40 hours of playtime on a single charge.",
-    price: 45000,
-    discountPrice: 38000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&auto=format&fit=crop&q=80",
-      },
-      {
-        url: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=800&auto=format&fit=crop&q=80",
-      },
-    ],
-    avgRating: 4.8,
-    reviewCount: 24,
-    stock: 12,
-    specifications: {
-      "Driver Size": "40mm Dynamic",
-      "Frequency Response": "20Hz - 20kHz",
-      "Bluetooth Version": "5.2",
-      "Battery Life": "Up to 40 Hours",
-    },
-  },
-  "classic-wristwatch": {
-    _id: "prod2",
-    name: "Classic Chronograph Wristwatch",
-    slug: "classic-wristwatch",
-    description:
-      "Crafted for timeless style and precision. Featuring a stainless steel case, sapphire glass casing protection, and Japanese quartz chronograph movement. Water-resistant up to 50 meters.",
-    price: 65000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&auto=format&fit=crop&q=80",
-      },
-    ],
-    avgRating: 4.6,
-    reviewCount: 15,
-    stock: 4,
-    specifications: {
-      "Case Diameter": "42mm",
-      "Glass Type": "Sapphire Crystal",
-      Movement: "Japanese Quartz",
-      "Water Resistance": "50m (5 ATM)",
-    },
-  },
-  "ergonomic-office-chair": {
-    _id: "prod3",
-    name: "Ergonomic Office Chair with Lumbar Support",
-    slug: "ergonomic-office-chair",
-    description:
-      "Optimize your work setup for complete comfort. Built with breathable mesh backs, dynamic 3D armrests, and premium pneumatic height adjustment. Reduces spine strain during long working sessions.",
-    price: 95000,
-    discountPrice: 80000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1505797149-43b0069ec26b?w=800&auto=format&fit=crop&q=80",
-      },
-    ],
-    avgRating: 4.7,
-    reviewCount: 30,
-    stock: 8,
-    specifications: {
-      "Back Type": "High Back Breathable Mesh",
-      Armrests: "3D Adjustable",
-      "Base Material": "Heavy Duty Nylon",
-      "Weight Capacity": "150kg",
-    },
-  },
-  "smart-fitness-tracker": {
-    _id: "prod4",
-    name: "Smart Fitness Watch Tracker",
-    slug: "smart-fitness-tracker",
-    description:
-      "Keep track of your health metrics dynamically. Monitors heart rate, blood oxygen levels, and active sleep states in real-time. Syncs seamlessly with iOS and Android devices.",
-    price: 25000,
-    images: [
-      {
-        url: "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?w=800&auto=format&fit=crop&q=80",
-      },
-    ],
-    avgRating: 4.4,
-    reviewCount: 9,
-    stock: 0,
-    specifications: {
-      "Display Size": "1.4 inch AMOLED",
-      "Battery Life": "Up to 10 Days",
-      Compatibility: "iOS & Android",
-      "Sensor Types": "Heart Rate, SpO2, Accelerometer",
-    },
-  },
-};
-
 interface DetailPageProps {
   params: Promise<{ slug: string }>;
 }
@@ -131,7 +34,6 @@ async function getProductBySlug(slug: string) {
 export default async function ProductDetailPage({ params }: DetailPageProps) {
   const resolvedParams = await params;
   const product = await getProductBySlug(resolvedParams.slug);
-  console.log(product);
 
   if (!product) {
     notFound();

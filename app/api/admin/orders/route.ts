@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
     );
     const status = url.searchParams.get("status");
     const filter: any = {};
-    if (status) filter.status = status;
+    if (status && status !== "all") filter.status = status;
     const total = await Order.countDocuments(filter);
     const items = await Order.aggregate([
       { $match: filter },

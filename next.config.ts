@@ -24,11 +24,20 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "images.unsplash.com",
       },
+      {
+        protocol: "https",
+        hostname: "placehold.co",
+      },
     ],
   },
 
   /* ---------- Server-only packages ---------- */
-  serverExternalPackages: ["mongoose", "bcryptjs", "jsonwebtoken", "nodemailer"],
+  serverExternalPackages: [
+    "mongoose",
+    "bcryptjs",
+    "jsonwebtoken",
+    "nodemailer",
+  ],
 };
 
 export default nextConfig;

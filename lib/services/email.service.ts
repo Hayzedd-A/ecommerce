@@ -1,6 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import nodemailer from "nodemailer";
 import { formatCurrency } from "../utils/formatters";
+import getStoreSettings from "../settings.server";
+import { IOrderDocument } from "../db/models/Order";
 
 // Set up transporter
 const transporter = nodemailer.createTransport({
@@ -13,22 +15,31 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const fromAddress = process.env.EMAIL_FROM || '"E-Commerce Store" <no-reply@example.com>';
+const fromAddress =
+  process.env.EMAIL_FROM || '"E-Commerce Store" <no-reply@example.com>';
 
 export class EmailService {
   /**
    * Helper to send HTML emails
    */
-  private static async sendMail(to: string, subject: string, html: string): Promise<boolean> {
+  private static async sendMail(
+    to: string,
+    subject: string,
+    html: string,
+  ): Promise<boolean> {
     // If SMTP is not fully configured, log and gracefully return
     if (!process.env.SMTP_USER || !process.env.SMTP_PASSWORD) {
-      console.warn(`⚠️ SMTP Credentials missing. Logging email instead:\nTo: ${to}\nSubject: ${subject}`);
+      console.warn(
+        `⚠️ SMTP Credentials missing. Logging email instead:\nTo: ${to}\nSubject: ${subject}`,
+      );
       return true;
     }
 
+    const { storeName } = await getStoreSettings();
+
     try {
       await transporter.sendMail({
-        from: fromAddress,
+        from: storeName || fromAddress,
         to,
         subject,
         html,
@@ -43,7 +54,11 @@ export class EmailService {
   /**
    * Send Password Reset link
    */
-  static async sendForgotPassword(email: string, name: string, resetLink: string): Promise<boolean> {
+  static async sendForgotPassword(
+    email: string,
+    name: string,
+    resetLink: string,
+  ): Promise<boolean> {
     const html = `
       <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e2e8f0; border-radius: 8px;">
         <h2 style="color: #2563eb; margin-top: 0;">Reset Your Password</h2>
@@ -62,20 +77,25 @@ export class EmailService {
   /**
    * Send Order Confirmation Email
    */
-  static async sendOrderConfirmation(email: string, name: string, order: any): Promise<boolean> {
+  static async sendOrderConfirmation(
+    email: string,
+    name: string,
+    order: IOrderDocument,
+  ): Promise<boolean> {
+    const settings = await getStoreSettings();
     const itemsHtml = order.items
       .map(
-        (item: any) => `
+        (item) => `
       <tr>
         <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9;">
           <div><strong>${item.name}</strong></div>
           <div style="color: #64748b; font-size: 0.875rem;">Qty: ${item.quantity}</div>
         </td>
         <td style="padding: 10px 0; border-bottom: 1px solid #f1f5f9; text-align: right;">
-          ${formatCurrency(item.price * item.quantity)}
+          ${formatCurrency(item.price * item.quantity, settings?.currencySymbol)}
         </td>
       </tr>
-    `
+    `,
       )
       .join("");
 
@@ -87,7 +107,7 @@ export class EmailService {
         </div>
         
         <p>Hello ${name},</p>
-        <p>Your order <strong>${order.orderNumber}</strong> has been received and is being processed.</p>
+        <p>Your order <strong>${order.orderNumber}</strong> has been confirmed and is being processed.</p>
         
         <h3 style="border-bottom: 2px solid #f1f5f9; padding-bottom: 8px; margin-top: 30px;">Order Summary</h3>
         <table style="width: 100%; border-collapse: collapse;">
@@ -105,13 +125,13 @@ export class EmailService {
         <table style="width: 100%; margin-top: 20px;">
           <tr>
             <td style="color: #64748b;">Subtotal</td>
-            <td style="text-align: right;">${formatCurrency(order.subtotal)}</td>
+            <td style="text-align: right;">${formatCurrency(order.subtotal, settings?.currencySymbol)}</td>
           </tr>
           ${
             order.deliveryFee > 0
               ? `<tr>
             <td style="color: #64748b;">Delivery Fee</td>
-            <td style="text-align: right;">${formatCurrency(order.deliveryFee)}</td>
+            <td style="text-align: right;">${formatCurrency(order.deliveryFee, settings?.currencySymbol)}</td>
           </tr>`
               : ""
           }
@@ -119,14 +139,15 @@ export class EmailService {
             order.discount > 0
               ? `<tr style="color: #10b981;">
             <td>Discount</td>
-            <td style="text-align: right;">-${formatCurrency(order.discount)}</td>
+            <td style="text-align: right;">-${formatCurrency(order.discount, settings?.currencySymbol)}</td>
           </tr>`
               : ""
           }
           <tr style="font-size: 1.125rem; font-weight: bold;">
             <td style="padding-top: 10px; border-top: 2px solid #cbd5e1;">Total</td>
             <td style="padding-top: 10px; border-top: 2px solid #cbd5e1; text-align: right;">${formatCurrency(
-              order.total
+              order.total,
+              settings?.currencySymbol,
             )}</td>
           </tr>
         </table>
@@ -140,7 +161,11 @@ export class EmailService {
       </div>
     `;
 
-    return this.sendMail(email, `Order Confirmation - ${order.orderNumber}`, html);
+    return this.sendMail(
+      email,
+      `Order Confirmation - ${order.orderNumber}`,
+      html,
+    );
   }
 
   /**
@@ -150,7 +175,7 @@ export class EmailService {
     email: string,
     name: string,
     orderNumber: string,
-    newStatus: string
+    newStatus: string,
   ): Promise<boolean> {
     const statusMap: Record<string, string> = {
       pending_payment: "Pending Payment",

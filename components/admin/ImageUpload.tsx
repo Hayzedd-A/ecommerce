@@ -8,10 +8,20 @@ import { toast } from "react-hot-toast";
 interface ImageUploadProps {
   value: { url: string; publicId: string; order: number; alt?: string }[];
   onChange: (value: { url: string; publicId: string; order: number; alt?: string }[]) => void;
+  folder?: string;
+  maxFiles?: number;
+  label?: string;
 }
 
-export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => {
+export const ImageUpload: React.FC<ImageUploadProps> = ({
+  value,
+  onChange,
+  folder = "products",
+  maxFiles,
+  label = "Product Images",
+}) => {
   const [isUploading, setIsUploading] = useState(false);
+  const isFull = maxFiles !== undefined && value.length >= maxFiles;
 
   const onUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
@@ -22,7 +32,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
       const file = files[0];
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", "products");
+      formData.append("folder", folder);
 
       const response = await apiClient.post("/admin/upload", formData, {
         headers: { "Content-Type": "multipart/form-data" },
@@ -57,13 +67,13 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
   return (
     <div className="space-y-4">
       <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-        Product Images
+        {label}
       </label>
       
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {value.map((image) => (
           <div key={image.publicId} className="relative aspect-square rounded-xl overflow-hidden border border-border bg-surface-secondary group">
-            <img src={image.url} alt="Product" className="object-cover w-full h-full" />
+            <img src={image.url} alt={image.alt || "Category image"} className="object-cover w-full h-full" />
             <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
               <button
                 type="button"
@@ -76,23 +86,30 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({ value, onChange }) => 
           </div>
         ))}
         
-        <label className="relative aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary-500 hover:bg-primary-500/5 transition-all flex flex-col items-center justify-center cursor-pointer text-muted-foreground hover:text-primary-500">
-          {isUploading ? (
-            <Loader2 className="h-8 w-8 animate-spin" />
-          ) : (
-            <>
-              <Plus className="h-8 w-8 mb-1" />
-              <span className="text-[10px] font-bold uppercase">Upload</span>
-            </>
-          )}
-          <input
-            type="file"
-            className="hidden"
-            accept="image/*"
-            onChange={onUpload}
-            disabled={isUploading}
-          />
-        </label>
+        {isFull ? (
+          <div className="relative aspect-square rounded-xl border border-border bg-surface p-4 flex flex-col items-center justify-center text-center text-xs text-muted-foreground">
+            <span className="font-semibold">Upload limit reached</span>
+            <span className="mt-2">Remove an image to upload another.</span>
+          </div>
+        ) : (
+          <label className="relative aspect-square rounded-xl border-2 border-dashed border-border hover:border-primary-500 hover:bg-primary-500/5 transition-all flex flex-col items-center justify-center cursor-pointer text-muted-foreground hover:text-primary-500">
+            {isUploading ? (
+              <Loader2 className="h-8 w-8 animate-spin" />
+            ) : (
+              <>
+                <Plus className="h-8 w-8 mb-1" />
+                <span className="text-[10px] font-bold uppercase">Upload</span>
+              </>
+            )}
+            <input
+              type="file"
+              className="hidden"
+              accept="image/*"
+              onChange={onUpload}
+              disabled={isUploading}
+            />
+          </label>
+        )}
       </div>
 
       {value.length === 0 && !isUploading && (

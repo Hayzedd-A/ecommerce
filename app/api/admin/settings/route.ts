@@ -3,6 +3,7 @@ import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import { StoreSettings } from "@/lib/db/models";
 import getStoreSettings from "@/lib/settings.server";
+import { getCurrencySymbol } from "@/currencies";
 
 export async function PUT(req: NextRequest) {
   try {
@@ -13,9 +14,17 @@ export async function PUT(req: NextRequest) {
     let settings = await StoreSettings.findOne();
     if (!settings) {
       settings = new StoreSettings({
-        ...(await getStoreSettings()) // creates default if not exists
+        ...(await getStoreSettings()), // creates default if not exists
       });
     }
+    if (body?.currency) {
+      body.currencySymbol = getCurrencySymbol(body.currency);
+      console.log({
+        body,
+        getCurrencySymbol: getCurrencySymbol(body.currency),
+      });
+    }
+
     // Merge allowed fields only
     const allowed = [
       "storeName",
@@ -33,19 +42,26 @@ export async function PUT(req: NextRequest) {
       "pickupEnabled",
       "deliveryEnabled",
       "pickupAddress",
+      "categoryView",
       "currency",
       "currencySymbol",
       "checkoutMethod",
       "personalAccount",
       "paymentSettings",
+      "heroContent",
+      "aboutUs",
     ];
     for (const k of allowed) {
-      if (Object.prototype.hasOwnProperty.call(body, k)) (settings as any)[k] = (body as any)[k];
+      if (Object.prototype.hasOwnProperty.call(body, k))
+        (settings as any)[k] = (body as any)[k];
     }
     await settings.save();
     return NextResponse.json({ success: true, data: settings });
   } catch (error: any) {
     console.error("Admin settings update error:", error);
-    return NextResponse.json({ success: false, message: error.message || "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: error.message || "Server error" },
+      { status: 500 },
+    );
   }
 }

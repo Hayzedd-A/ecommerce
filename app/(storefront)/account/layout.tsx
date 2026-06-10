@@ -11,7 +11,7 @@ import { logout } from "@/lib/store/slices/authSlice";
 const SIDEBAR_LINKS = [
   { href: "/account", label: "Profile", icon: User },
   { href: "/account/orders", label: "Orders", icon: Package },
-  { href: "/account/addresses", label: "Addresses", icon: MapPin },
+  // { href: "/account/addresses", label: "Addresses", icon: MapPin },
   { href: "/account/wishlist", label: "Wishlist", icon: Heart },
 ];
 

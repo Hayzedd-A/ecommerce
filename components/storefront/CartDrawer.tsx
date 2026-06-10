@@ -8,10 +8,11 @@ import { X, ShoppingBag, Plus, Minus, Trash2, ArrowRight } from "lucide-react";
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 import { toggleCartDrawer, closeModal } from "@/lib/store/slices/uiSlice";
 import { updateQuantity, removeFromCart } from "@/lib/store/slices/cartSlice";
-import { formatCurrency } from "@/lib/utils/formatters";
 import { Button } from "../ui/Button";
+import { useStoreSettings } from "../providers/SettingsProvider";
 
 export default function CartDrawer() {
+  const { formatMoney } = useStoreSettings();
   const router = useRouter();
   const dispatch = useAppDispatch();
 
@@ -167,7 +168,7 @@ export default function CartDrawer() {
                     {/* Price and delete */}
                     <div className="flex items-center gap-3">
                       <span className="text-sm font-bold text-foreground">
-                        {formatCurrency(item.price * item.quantity)}
+                        {formatMoney(item.price * item.quantity)}
                       </span>
                       <button
                         onClick={() =>
@@ -196,7 +197,7 @@ export default function CartDrawer() {
           <div className="p-6 border-t border-border bg-surface space-y-4">
             <div className="flex items-center justify-between text-base font-bold text-foreground">
               <span>Subtotal</span>
-              <span>{formatCurrency(subtotal)}</span>
+              <span>{formatMoney(subtotal)}</span>
             </div>
             <p className="text-xs text-muted-foreground">
               Shipping and discounts are calculated at checkout.

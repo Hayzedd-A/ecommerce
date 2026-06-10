@@ -6,13 +6,23 @@ import { Plus, Pencil, Trash2 } from "lucide-react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
+import { ImageUpload } from "@/components/admin/ImageUpload";
 import apiClient from "@/lib/api/client";
+import { slugify } from "@/lib/utils/helpers";
 import { toast } from "react-hot-toast";
+import Image from "next/image";
+import { Toggle } from "@/components/ui/Toggle";
+import { FormControl, InputLabel, MenuItem, Select } from "@mui/material";
+import { useStoreSettings } from "@/components/providers/SettingsProvider";
 
 export default function AdminCategoriesPage() {
   const [categories, setCategories] = useState<any[]>([]);
+  const { categoryView, updateStoreSettings } = useStoreSettings();
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
+  const [description, setDescription] = useState("");
+  const [images, setImages] = useState<
+    { url: string; publicId: string; order: number; alt?: string }[]
+  >([]);
   const [isActive, setIsActive] = useState(true);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
@@ -47,12 +57,21 @@ export default function AdminCategoriesPage() {
     try {
       await apiClient.post("/admin/categories", {
         name,
-        slug: name.toLowerCase().replace(/\s/g, "-"),
+        slug: slugify(name),
+        description: description || undefined,
+        image: images[0]
+          ? {
+              url: images[0].url,
+              publicId: images[0].publicId,
+              alt: images[0].alt || undefined,
+            }
+          : undefined,
         isActive,
       });
       toast.success("Category created");
       setName("");
-      setSlug("");
+      setDescription("");
+      setImages([]);
       setIsActive(true);
       fetchCategories();
     } catch (error: any) {
@@ -96,14 +115,44 @@ export default function AdminCategoriesPage() {
       </div>
 
       <Card className="p-6" glass>
-        <div className="grid gap-4 mb-6 sm:grid-cols-[1fr_auto]">
-          <div className="grid gap-3 ">
+        <div className="grid gap-4 mb-6 sm:grid-cols-[1fr_auto] border-b border-border pb-4">
+          <div className="grid gap-3">
             <Input
               label="Name"
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-            {/* <Input label="Slug" value={slug} onChange={(event) => setSlug(event.target.value)} /> */}
+            <label className="flex flex-col gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Description
+              </span>
+              <textarea
+                value={description}
+                onChange={(event) => setDescription(event.target.value)}
+                className="w-full rounded-lg border border-border bg-input-bg px-4 py-2.5 text-foreground placeholder:text-muted transition-all duration-200 outline-none focus:border-primary-500 focus:ring-4 focus:ring-ring"
+                rows={3}
+                placeholder="Optional category description"
+              />
+            </label>
+            <ImageUpload
+              value={images}
+              onChange={setImages}
+              folder="categories"
+              maxFiles={1}
+              label="Category image"
+            />
+            {/* <Input
+              label="Image alt text"
+              value={images[0]?.alt || ""}
+              onChange={(event) => setImages((prev) =>
+                prev.map((img, index) =>
+                  index === 0
+                    ? { ...img, alt: event.target.value }
+                    : img,
+                ),
+              )}
+              placeholder="Optional alt text for category image"
+            /> */}
           </div>
           <div className="flex items-end gap-3">
             <label className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -121,12 +170,36 @@ export default function AdminCategoriesPage() {
           </div>
         </div>
 
+        <div className="flex my-6">
+          <FormControl variant="outlined" sx={{ minWidth: 200, color: 'inherit' }}>
+            <InputLabel id="category-view-label" sx={{ color: 'inherit' }}>
+              Homepage category display
+            </InputLabel>
+            <Select
+              labelId="category-view-label"
+              id="category-view-select"
+              value={categoryView || "text"}
+              label="Homepage category display"
+              onChange={(e) => {
+                const value = e.target.value as "text" | "image";
+                updateStoreSettings({ categoryView: value });
+              }}
+              displayEmpty
+              className="text-inherit"
+              sx={{ color: 'inherit' }}
+            >
+              <MenuItem value="text">Text only</MenuItem>
+              <MenuItem value="image">Image + text</MenuItem>
+            </Select>
+          </FormControl>
+        </div>
+        
         <div className="overflow-x-auto">
           <table className="min-w-full text-left border-separate border-spacing-y-2">
             <thead>
               <tr className="text-xs uppercase tracking-wider text-muted-foreground">
+                <th className="px-4 py-3">Image</th>
                 <th className="px-4 py-3">Name</th>
-                <th className="px-4 py-3">Slug</th>
                 <th className="px-4 py-3">Status</th>
                 <th className="px-4 py-3 text-right">Actions</th>
               </tr>
@@ -156,11 +229,17 @@ export default function AdminCategoriesPage() {
                     key={category._id}
                     className="bg-surface rounded-3xl shadow-sm"
                   >
+                    <td className="px-4 py-4 ">
+                      <Image
+                        src={category.image?.url || "/placeholder-image.png"}
+                        alt={category.image?.alt || category.name}
+                        width={40}
+                        height={40}
+                        className="inline-block h-10 w-10 rounded-full object-cover mr-3"
+                      />
+                    </td>
                     <td className="px-4 py-4 font-semibold text-foreground">
                       {category.name}
-                    </td>
-                    <td className="px-4 py-4 text-sm text-muted-foreground">
-                      {category.slug}
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
                       {category.isActive ? "Active" : "Disabled"}

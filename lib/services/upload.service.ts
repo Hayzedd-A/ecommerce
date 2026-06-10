@@ -20,7 +20,7 @@ export class UploadService {
    */
   static async uploadImageBuffer(
     buffer: Buffer,
-    folder = "products"
+    folder = "products",
   ): Promise<UploadedFile> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
@@ -34,13 +34,50 @@ export class UploadService {
             return reject(new Error(`Image upload failed: ${error.message}`));
           }
           if (!result) {
-            return reject(new Error("Image upload failed: Empty response received."));
+            return reject(
+              new Error("Image upload failed: Empty response received."),
+            );
           }
           resolve({
             url: result.secure_url,
             publicId: result.public_id,
           });
-        }
+        },
+      );
+
+      // Write buffer to stream and end it
+      uploadStream.end(buffer);
+    });
+  }
+
+  static async uploadFile(
+    file: File,
+    folder = "products",
+  ): Promise<UploadedFile> {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    return new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: `ecommerce/${folder}`,
+          resource_type: "auto",
+          type: "authenticated",
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary upload stream error:", error);
+            return reject(new Error(`File upload failed: ${error.message}`));
+          }
+          if (!result) {
+            return reject(
+              new Error("File upload failed: Empty response received."),
+            );
+          }
+          console.log("Cloudinary result", result);
+          resolve({
+            url: result.secure_url,
+            publicId: result.public_id,
+          });
+        },
       );
 
       // Write buffer to stream and end it

@@ -1,3 +1,4 @@
+import { NextRequest } from "next/server";
 import { Order, Wishlist, Cart, Guest } from "../db/models";
 import mongoose from "mongoose";
 
@@ -10,13 +11,13 @@ export async function mergeGuestData(guestId: string, userId: string) {
   await Guest.findOneAndUpdate(
     { guestId },
     { userId: userObjectId },
-    { upsert: true }
+    { upsert: true },
   );
 
   // 2. Link Orders
   await Order.updateMany(
     { guestId, userId: { $exists: false } },
-    { userId: userObjectId }
+    { userId: userObjectId },
   );
 
   // 3. Merge Wishlist
@@ -44,7 +45,7 @@ export async function mergeGuestData(guestId: string, userId: string) {
         const existingItem = mergedItems.find(
           (i) =>
             i.productId.toString() === guestItem.productId.toString() &&
-            i.variantId?.toString() === guestItem.variantId?.toString()
+            i.variantId?.toString() === guestItem.variantId?.toString(),
         );
         if (existingItem) {
           existingItem.quantity += guestItem.quantity;
@@ -64,3 +65,23 @@ export async function mergeGuestData(guestId: string, userId: string) {
     await Cart.deleteOne({ guestId });
   }
 }
+
+export const upsertGuest = async (
+  req: NextRequest,
+  { email, name, phone }: { email?: string; name?: string; phone?: string },
+) => {
+  try {
+    const guest = await Guest.findOneAndUpdate(
+      { guestId: req.headers.get("x-guest-id") },
+      {
+        ...(email && { email }),
+        ...(name && { name }),
+        ...(phone && { phone }),
+      },
+      { upsert: true },
+    );
+    return guest;
+  } catch (error) {
+    return error;
+  }
+};

@@ -14,6 +14,14 @@ import Product from "@/lib/db/models/Product";
 import User from "@/lib/db/models/User";
 import { formatCurrency, formatDate } from "@/lib/utils/formatters";
 import { Card } from "@/components/ui/Card";
+import getStoreSettings from "@/lib/settings.server";
+import {
+  orderStatusColors,
+  orderStatusLabels,
+  paymentStatusColors,
+  paymentStatusLabels,
+} from "@/lib/utils/helpers";
+import { IOrder, IOrderObject } from "@/lib/types";
 
 async function getDashboardData() {
   try {
@@ -21,6 +29,7 @@ async function getDashboardData() {
 
     // Query for total revenue
     const revenueResult = await Order.aggregate([
+      { $match: { status: { $ne: "draft" } } },
       {
         $lookup: {
           from: "payments",
@@ -34,7 +43,6 @@ async function getDashboardData() {
           payment: { $arrayElemAt: ["$payment", 0] },
         },
       },
-      { $match: { "payment.status": "paid" } },
       { $group: { _id: null, total: { $sum: "$total" } } },
     ]);
 
@@ -42,7 +50,7 @@ async function getDashboardData() {
 
     // Counts
     const ordersCount = await Order.countDocuments({
-      status: { $ne: "initialized" },
+      status: { $ne: "draft" },
     });
     const customersCount = await User.countDocuments({
       role: "customer",
@@ -66,7 +74,7 @@ async function getDashboardData() {
           payment: { $arrayElemAt: ["$payment", 0] },
         },
       },
-      { $match: { status: { $ne: "initialized" } } },
+      { $match: { status: { $ne: "draft" } } },
       { $sort: { createdAt: -1 } },
       { $limit: 5 },
     ]);
@@ -86,26 +94,7 @@ async function getDashboardData() {
 
 export default async function AdminDashboardPage() {
   const { stats, recentOrders } = await getDashboardData();
-
-  const statusColors: Record<string, string> = {
-    initialized: "bg-info-50 text-info-600 border-info-100",
-    pending: "bg-warning-50 text-warning-600 border-warning-100",
-    paid: "bg-success-50 text-success-600 border-success-100",
-    processing: "bg-primary-50 text-primary-600 border-primary-100",
-    ready_for_pickup: "bg-accent-50 text-accent-600 border-accent-100",
-    completed: "bg-slate-50 text-slate-600 border-slate-100",
-    cancelled: "bg-error-50 text-error-600 border-error-100",
-  };
-
-  const statusLabels: Record<string, string> = {
-    initialized: "Initialized",
-    pending: "Pending",
-    paid: "Paid",
-    processing: "Processing",
-    ready_for_pickup: "Ready for Pickup",
-    completed: "Completed",
-    cancelled: "Cancelled",
-  };
+  const settings = await getStoreSettings();
 
   return (
     <div className="space-y-8">
@@ -129,7 +118,7 @@ export default async function AdminDashboardPage() {
                 Total Sales
               </span>
               <h3 className="text-2xl font-black text-foreground">
-                {formatCurrency(stats.totalRevenue)}
+                {formatCurrency(stats.totalRevenue, settings.currencySymbol)}
               </h3>
             </div>
             <div className="p-3 bg-success-50 text-success-600 rounded-xl">
@@ -250,7 +239,7 @@ export default async function AdminDashboardPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border/40 text-sm">
-              {recentOrders.map((order: any) => (
+              {recentOrders.map((order: IOrderObject) => (
                 <tr
                   key={order._id}
                   className="hover:bg-surface-secondary/40 transition-colors"
@@ -265,21 +254,21 @@ export default async function AdminDashboardPage() {
                     {formatDate(order.createdAt)}
                   </td>
                   <td className="py-3.5 px-4 font-bold text-foreground">
-                    {formatCurrency(order.total)}
+                    {formatCurrency(order.total, settings.currencySymbol)}
                   </td>
                   <td className="py-3.5 px-4">
                     <span
-                      className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${statusColors[order.payment?.status] || "bg-slate-50 border-slate-200"}`}
+                      className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${paymentStatusColors[order.payment?.status] || "bg-slate-50 border-slate-200"}`}
                     >
-                      {statusLabels[order.payment?.status] ||
+                      {paymentStatusLabels[order.payment?.status] ||
                         order.payment?.status}
                     </span>
                   </td>
                   <td className="py-3.5 px-4">
                     <span
-                      className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${statusColors[order.status] || "bg-slate-50 border-slate-200"}`}
+                      className={`inline-block text-[10px] font-extrabold uppercase px-2 py-0.5 border rounded-full ${orderStatusColors[order.status] || "bg-slate-50 border-slate-200"}`}
                     >
-                      {statusLabels[order.status] || order.status}
+                      {orderStatusLabels[order.status] || order.status}
                     </span>
                   </td>
                   <td className="py-3.5 pl-4 text-right">

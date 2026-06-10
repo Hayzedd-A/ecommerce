@@ -18,7 +18,6 @@ import {
 
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
-// import { useTheme } from "../providers/ThemeProvider";
 import { clearUser } from "@/lib/store/slices/authSlice";
 import { toggleCartDrawer } from "@/lib/store/slices/uiSlice";
 import apiClient from "@/lib/api/client";

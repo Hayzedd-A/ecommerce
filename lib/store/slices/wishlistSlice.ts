@@ -8,14 +8,14 @@ export const fetchWishlist = createAsyncThunk("wishlist/fetchWishlist", async ()
 
 export const toggleWishlistServer = createAsyncThunk(
   "wishlist/toggleWishlistServer",
-  async (productId: string) => {
-    const response = await apiClient.post("/wishlist", { productId });
-    return { productId, action: response.data.action };
+  async (product: any) => {
+    const response = await apiClient.post("/wishlist", { productId: product._id });
+    return { product, action: response.data.action };
   }
 );
 
 interface WishlistState {
-  items: string[]; // Array of product IDs
+  items: any[]; // Array of product objects
   isLoading: boolean;
 }
 
@@ -28,19 +28,7 @@ const wishlistSlice = createSlice({
   name: "wishlist",
   initialState,
   reducers: {
-    toggleWishlist(state, action: PayloadAction<string>) {
-      if (state.items.includes(action.payload)) {
-        state.items = state.items.filter((id) => id !== action.payload);
-      } else {
-        state.items.push(action.payload);
-      }
-    },
-
-    removeFromWishlist(state, action: PayloadAction<string>) {
-      state.items = state.items.filter((id) => id !== action.payload);
-    },
-
-    setWishlist(state, action: PayloadAction<string[]>) {
+    setWishlist(state, action: PayloadAction<any[]>) {
       state.items = action.payload;
     },
 
@@ -55,13 +43,28 @@ const wishlistSlice = createSlice({
   extraReducers: (builder) => {
     builder.addCase(fetchWishlist.fulfilled, (state, action) => {
       state.items = action.payload;
+      state.isLoading = false;
+    });
+    builder.addCase(fetchWishlist.pending, (state) => {
+      state.isLoading = true;
+    });
+    builder.addCase(fetchWishlist.rejected, (state) => {
+      state.isLoading = false;
+    });
+    builder.addCase(toggleWishlistServer.fulfilled, (state, action) => {
+      const { product, action: wishlistAction } = action.payload;
+      if (wishlistAction === "added") {
+        if (!state.items.find((i) => i._id === product._id)) {
+          state.items.push(product);
+        }
+      } else {
+        state.items = state.items.filter((i) => i._id !== product._id);
+      }
     });
   },
 });
 
 export const {
-  toggleWishlist,
-  removeFromWishlist,
   setWishlist,
   clearWishlist,
   setWishlistLoading,

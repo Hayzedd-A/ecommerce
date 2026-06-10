@@ -6,6 +6,7 @@ import Notification from "@/lib/db/models/Notification";
 import User from "@/lib/db/models/User";
 import { paymentManager } from "@/lib/services/payment/paymentManager";
 import { EmailService } from "@/lib/services/email.service";
+import { Guest } from "@/lib/db/models";
 
 export async function POST(req: NextRequest) {
   try {
@@ -49,12 +50,18 @@ export async function POST(req: NextRequest) {
     const payment = await Payment.findOne({ reference });
     if (!payment) {
       console.error(`❌ Payment reference not found: ${reference}`);
-      return NextResponse.json({ success: false, message: "Payment not found" }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Payment not found" },
+        { status: 404 },
+      );
     }
 
     // Skip if already processed (webhook idempotency)
     if (payment.status === "paid") {
-      return NextResponse.json({ success: true, message: "Webhook already processed" });
+      return NextResponse.json({
+        success: true,
+        message: "Webhook already processed",
+      });
     }
 
     // Update payment record
@@ -65,41 +72,55 @@ export async function POST(req: NextRequest) {
     await payment.save();
 
     // Update corresponding order
-    const order = await Order.findById(payment.orderId);
+    const order = await Order.findById(payment.orderId).populate("userId");
     if (order) {
       if (status === "paid") {
         // order.status = "paid";
         // await order.save();
+        const [currentUser, currentGuest] = await Promise.all([
+          User.findById(order.userId),
+          Guest.findById(order.userId),
+        ]);
 
-        // Retrieve user or guest details
-        const email = order.isGuest ? order.guestEmail : "";
-        const name = order.shippingAddress.fullName;
+        const user = currentUser || currentGuest; // could be either a registered user or a guest session
+        if (!user) {
+          console.warn(`⚠️ User not found for order ${order._id}`);
+        }
+        if (user) {
+          // Retrieve user or guest details
+          const email = user.email;
+          const name = order.shippingAddress.fullName;
 
-        // Fetch User name if authenticated
-        let resolvedEmail = email;
-        let resolvedName = name;
+          // Fetch User name if authenticated
+          let resolvedEmail = email;
+          let resolvedName = name;
 
-        if (order.userId) {
-          const u = await User.findById(order.userId);
-          if (u) {
-            resolvedEmail = u.email;
-            resolvedName = u.name;
+          if (order.userId) {
+            const u = await User.findById(order.userId);
+            if (u) {
+              resolvedEmail = u.email;
+              resolvedName = u.name;
+            }
           }
-        }
 
-        // Send confirmation email asynchronously
-        if (resolvedEmail) {
-          await EmailService.sendOrderConfirmation(resolvedEmail, resolvedName, order);
-        }
+          // Send confirmation email asynchronously
+          if (resolvedEmail) {
+            await EmailService.sendOrderConfirmation(
+              resolvedEmail,
+              resolvedName,
+              order,
+            );
+          }
 
-        // Create notification in DB
-        await Notification.create({
-          userId: order.userId || undefined,
-          type: "payment_success",
-          title: "Order Paid Successfully",
-          message: `Your order ${order.orderNumber} for ${amount} NGN has been paid and confirmed.`,
-          metadata: { orderId: order._id, orderNumber: order.orderNumber },
-        });
+          // Create notification in DB
+          await Notification.create({
+            userId: order.userId || undefined,
+            type: "payment_success",
+            title: "Order Paid Successfully",
+            message: `Your order ${order.orderNumber} for ${amount} NGN has been paid and confirmed.`,
+            metadata: { orderId: order._id, orderNumber: order.orderNumber },
+          });
+        }
       } else {
         order.status = "cancelled";
         await order.save();
@@ -115,12 +136,19 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ success: true, message: "Webhook processed successfully" });
+    return NextResponse.json({
+      success: true,
+      message: "Webhook processed successfully",
+    });
   } catch (error: any) {
     console.error("Webhook route error:", error);
     return NextResponse.json(
-      { success: false, message: "Internal server error", error: error.message },
-      { status: 500 }
+      {
+        success: false,
+        message: "Internal server error",
+        error: error.message,
+      },
+      { status: 500 },
     );
   }
 }

@@ -4,8 +4,9 @@
 import dbConnect from "@/lib/db/connect";
 import StoreSettings from "@/lib/db/models/StoreSettings";
 import type { IStoreSettings } from "@/lib/types";
+import { cache } from "react";
 
-export async function getStoreSettings(): Promise<IStoreSettings> {
+export const getStoreSettings = cache(async (): Promise<IStoreSettings> => {
   await dbConnect();
   let settings = await StoreSettings.findOne();
   if (!settings) {
@@ -20,6 +21,6 @@ export async function getStoreSettings(): Promise<IStoreSettings> {
   // Serialize mongoose document to plain JS object suitable for sending to client
   const plain = JSON.parse(JSON.stringify(settings));
   return plain as IStoreSettings;
-}
+});
 
 export default getStoreSettings;

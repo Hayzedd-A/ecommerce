@@ -1,23 +1,28 @@
 import { NextRequest, NextResponse } from "next/server";
 import dbConnect from "@/lib/db/connect";
 import Order from "@/lib/db/models/Order";
-import { getIdentity } from "@/lib/auth/getIdentity";
+import { getIdentity, getRequestUser } from "@/lib/auth/getIdentity";
 import { UploadService } from "@/lib/services/upload.service";
 import mongoose from "mongoose";
 import { Payment } from "@/lib/db/models";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest) {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
     await dbConnect();
-    const { id } = await params;
-    const identity = getIdentity(req);
+    const formData = await req.formData();
+    const reference = formData.get("reference") as string;
+    const { _id, userModel } = await getRequestUser(req);
 
-    const order = await Order.findById(id);
+    const payment = await Payment.findOne({ reference });
+    if (!payment) {
+      return NextResponse.json(
+        { success: false, message: "Payment not found" },
+        { status: 404 },
+      );
+    }
+    const order = await Order.findById(payment.orderId);
     if (!order) {
       return NextResponse.json(
         { success: false, message: "Order not found" },
@@ -25,47 +30,20 @@ export async function POST(
       );
     }
 
-    // Allow if user owns the order, or if guest and guestId matches
-    if (order.userId) {
-      if (
-        !identity.userId ||
-        String(order.userId) !== String(identity.userId)
-      ) {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 403 },
-        );
-      }
-    } else if (order.isGuest) {
-      const guestId = req.headers.get("x-guest-id");
-      if (!guestId || guestId !== order.guestId) {
-        return NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 403 },
-        );
-      }
-    } else {
+    if (!order.userId?.equals(_id)) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 403 },
       );
     }
-    const payment = await Payment.findOne({ orderId: id });
-    if (!payment) {
-      return NextResponse.json(
-        { success: false, message: "Payment not found" },
-        { status: 404 },
-      );
-    }
 
     if (payment.status === "paid" && payment.evidenceFile) {
       return NextResponse.json(
-        { success: false, message: "Payment already verified" },
-        { status: 400 },
+        { success: true, message: "Payment already verified" },
+        { status: 200 },
       );
     }
 
-    const formData = await req.formData();
     const file = formData.get("file") as File | null;
     if (!file) {
       return NextResponse.json(
@@ -77,12 +55,12 @@ export async function POST(
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadResult = await UploadService.uploadImageBuffer(
       buffer,
-      `orders/${id}`,
+      `payments/evidence/${payment.reference}`,
     );
 
     if (!uploadResult || !uploadResult.url) {
       return NextResponse.json(
-        { success: false, message: "Upload failed" },
+        { success: false, message: "Upload failed please try again" },
         { status: 500 },
       );
     }
@@ -90,9 +68,11 @@ export async function POST(
     payment.evidenceFile = uploadResult.url;
     payment.paidAt = new Date();
     payment.status = "paid";
-    order.status = "pending";
+    order.status = "awaiting_confirmation";
 
-    await Promise.all([order.save({ session }), payment.save({ session })]);
+    await order.save({ session });
+    await payment.save({ session });
+    await session.commitTransaction();
     return NextResponse.json({
       success: true,
       message: "Evidence uploaded",
@@ -100,9 +80,12 @@ export async function POST(
     });
   } catch (error: any) {
     console.error("Upload evidence error:", error);
+    await session.abortTransaction();
     return NextResponse.json(
       { success: false, message: error?.message || "Server error" },
       { status: 500 },
     );
+  } finally {
+    await session.endSession();
   }
 }

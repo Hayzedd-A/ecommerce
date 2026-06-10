@@ -14,7 +14,17 @@ export async function GET(req: NextRequest) {
 
     const query = userId ? { userId } : { guestId };
     const items = await Wishlist.find(query).select("productId");
-    const products = await Product.find({ _id: { $in: items.map((i) => i.productId) }, status: "active" }).lean();
+    const products = await Product.aggregate([
+      { $match: { _id: { $in: items.map((i) => i.productId) }, status: "active" } },
+      {
+        $lookup: {
+          from: "productvariants",
+          localField: "_id",
+          foreignField: "productId",
+          as: "variants",
+        },
+      },
+    ]);
 
     return NextResponse.json({
       success: true,
