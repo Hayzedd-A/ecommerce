@@ -7,9 +7,7 @@ import Payment from "@/lib/db/models/Payment";
 import DeliveryLocation from "@/lib/db/models/DeliveryLocation";
 import { CheckoutSchema } from "@/lib/validators/order.schema";
 import { generateOrderNumber } from "@/lib/utils/helpers";
-import { AuthService } from "@/lib/services/auth.service";
-import { COOKIE_ACCESS_TOKEN } from "@/lib/utils/constants";
-import { Coupon, StoreSettings, ProductVariant } from "@/lib/db/models";
+import { Coupon, ProductVariant } from "@/lib/db/models";
 import mongoose from "mongoose";
 import { getRequestUser } from "@/lib/auth/getIdentity";
 import { upsertGuest } from "@/lib/auth/mergeGuest";
@@ -39,7 +37,6 @@ export async function POST(req: NextRequest) {
       items,
       notes,
       couponUsed,
-      isGuest,
       guestEmail,
       guestPhone,
       paymentRef,

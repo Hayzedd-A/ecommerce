@@ -57,10 +57,6 @@ export const NestedVariantSelector: React.FC<NestedVariantSelectorProps> = ({
   const [selections, setSelections] = useState<SelectionStep[]>([]);
   const [variantTree, setVariantTree] = useState<VariantNode[]>([]);
 
-  useEffect(() => {
-    loadVariants();
-  }, [productId]);
-
   const loadVariants = async () => {
     try {
       const response = await apiClient.get(
@@ -76,6 +72,10 @@ export const NestedVariantSelector: React.FC<NestedVariantSelectorProps> = ({
       setIsLoading(false);
     }
   };
+
+  useEffect(() => {
+    loadVariants();
+  }, [productId]);
 
   const getNextLevelVariants = (): VariantNode[] => {
     if (selections.length === 0) {
@@ -124,16 +124,16 @@ export const NestedVariantSelector: React.FC<NestedVariantSelectorProps> = ({
     if (selections.length === 0) return null;
 
     const lastSelection = selections[selections.length - 1];
-    return (
-      allVariants.find((v) => v._id === lastSelection.variantId) || null
-    );
+    return allVariants.find((v) => v._id === lastSelection.variantId) || null;
   };
 
   const nextVariants = getNextLevelVariants();
   const currentVariant = getCurrentVariant();
 
   if (isLoading) {
-    return <div className="text-sm text-muted-foreground">Loading variants...</div>;
+    return (
+      <div className="text-sm text-muted-foreground">Loading variants...</div>
+    );
   }
 
   return (
@@ -172,7 +172,9 @@ export const NestedVariantSelector: React.FC<NestedVariantSelectorProps> = ({
         <div className="p-4 bg-success-50 border border-success-200 rounded-lg">
           <p className="text-sm text-success-900 font-medium">
             ✓ Variant selected with{" "}
-            {currentVariant.stock > 0 ? `${currentVariant.stock} in stock` : "out of stock"}
+            {currentVariant.stock > 0
+              ? `${currentVariant.stock} in stock`
+              : "out of stock"}
           </p>
         </div>
       )}

@@ -10,6 +10,7 @@ import { addToCart } from "@/lib/store/slices/cartSlice";
 import { cn } from "@/lib/utils/helpers";
 import { Button } from "@/components/ui/Button";
 import { useStoreSettings } from "../providers/SettingsProvider";
+import Image from "next/image";
 
 interface VariantSelectionModalProps {
   product: {
@@ -41,6 +42,12 @@ export default function VariantSelectionModal({
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState("");
 
+  // Find currently selected variant
+  const selectedVariant = variants.find((v) => {
+    return Object.entries(selectedAttributes).every(
+      ([key, val]) => v.attributes[key] === val,
+    );
+  });
   // Initialize selected attributes when modal opens or product changes
   useEffect(() => {
     if (open && variants.length > 0) {
@@ -55,26 +62,19 @@ export default function VariantSelectionModal({
     }
   }, [open, product, variants]);
 
-  if (!product) return null;
-
-  // Group attributes from variants
-  const attributeNames = Array.from(
-    new Set(variants.flatMap((v) => Object.keys(v.attributes))),
-  );
-
-  // Find currently selected variant
-  const selectedVariant = variants.find((v) => {
-    return Object.entries(selectedAttributes).every(
-      ([key, val]) => v.attributes[key] === val,
-    );
-  });
-
   // Update active image if variant changes and has its own images
   useEffect(() => {
     if (selectedVariant?.images?.[0]?.url) {
       setActiveImage(selectedVariant.images[0].url);
     }
   }, [selectedVariant]);
+
+  if (!product) return null;
+
+  // Group attributes from variants
+  const attributeNames = Array.from(
+    new Set(variants.flatMap((v) => Object.keys(v.attributes))),
+  );
 
   const currentPrice =
     selectedVariant?.price || product.discountPrice || product.price;
@@ -148,7 +148,9 @@ export default function VariantSelectionModal({
           <div className="flex gap-4">
             <div className="h-24 w-24 rounded-xl overflow-hidden border border-border bg-white flex-shrink-0">
               {activeImage ? (
-                <img
+                <Image
+                  width={96}
+                  height={96}
                   src={activeImage}
                   alt={product.name}
                   className="h-full w-full object-cover"
