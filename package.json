@@ -24,6 +24,7 @@
     "embla-carousel-react": "^8.6.0",
     "jose": "^6.2.3",
     "jsonwebtoken": "^9.0.3",
+    "libphonenumber-js": "^1.13.6",
     "lucide-react": "^1.17.0",
     "mongoose": "^9.6.3",
     "next": "16.2.6",

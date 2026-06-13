@@ -34,6 +34,7 @@ import { IDeliveryLocation } from "@/lib/types";
 import { CheckoutMethod } from "@/lib/utils/constants";
 import CheckoutConfirmationModal from "@/components/storefront/CheckoutConfirmationModal";
 import { SocialIcon } from "react-social-icons";
+import { normalizePhoneNumber } from "@/lib/utils/formatters";
 
 export default function CheckoutPage() {
   const router = useRouter();
@@ -211,7 +212,10 @@ export default function CheckoutPage() {
     });
 
     if (!validationResult.success) {
-      toast.error(validationResult.error.issues[0]?.message || "Please fill in all required fields.");
+      toast.error(
+        validationResult.error.issues[0]?.message ||
+          "Please fill in all required fields.",
+      );
       return;
     }
 
@@ -249,7 +253,11 @@ export default function CheckoutPage() {
       `👤 *Name:* ${addr?.fullName || "—"}`,
       `📞 *Phone:* ${addr?.phone || guestPhone || "—"}`,
       ...(guestEmail ? [`✉️  *Email:* ${guestEmail}`] : []),
-      ...(addr?.street ? [`🏠 *Address:* ${addr.street}${addr.city ? `, ${addr.city}` : ""}${addr.state ? `, ${addr.state}` : ""}`] : []),
+      ...(addr?.street
+        ? [
+            `🏠 *Address:* ${addr.street}${addr.city ? `, ${addr.city}` : ""}${addr.state ? `, ${addr.state}` : ""}`,
+          ]
+        : []),
     ].join("\n");
 
     // ── Price summary ─────────────────────────────────────────────────────────
@@ -297,7 +305,13 @@ ${"─".repeat(30)}
 Thank you! 🙏
 `.trim();
 
-    const whatsappNumber = storeWhatsappNumber?.replace(/\D/g, "");
+    if (!storeWhatsappNumber) {
+      toast.error(
+        "No WhatsApp number found. Please contact the store for assistance.",
+      );
+      return;
+    }
+    const whatsappNumber = normalizePhoneNumber(storeWhatsappNumber);
     const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, "_blank");
   };

@@ -3,6 +3,7 @@
 /* ============================================== */
 
 // import { getCurrencySymbol } from "@/currencies";
+import { parsePhoneNumberFromString, CountryCode } from "libphonenumber-js";
 
 /**
  * Format a number as a currency string.
@@ -103,6 +104,23 @@ export function formatFileSize(bytes: number): string {
   const sizes = ["B", "KB", "MB", "GB"];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
   return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
+export function normalizePhoneNumber(
+  phoneNumber: string,
+  countryCode: CountryCode = "NG",
+): string {
+  try {
+    const phone = parsePhoneNumberFromString(phoneNumber, countryCode);
+
+    if (!phone || !phone.isValid()) {
+      throw new Error("Invalid phone number or country code");
+    }
+
+    return phone.number; // Returns E.164 format
+  } catch (error) {
+    throw error;
+  }
 }
 
 /**
