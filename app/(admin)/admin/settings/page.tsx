@@ -124,6 +124,19 @@ const settingsSchema = z.object({
     buttonLink: z.string().max(200).optional().or(z.literal("")),
   }),
 
+  heroSlides: z
+    .array(
+      z.object({
+        image: z.object({
+          url: z.string().url("Invalid image URL"),
+          publicId: z.string(),
+        }),
+        mainCaption: z.string().max(100).optional().or(z.literal("")),
+        subCaption: z.string().max(200).optional().or(z.literal("")),
+      }),
+    )
+    .max(5, "Maximum 5 slides allowed"),
+
   aboutUs: z.object({
     title: z.string().max(100).optional().or(z.literal("")),
     content: z.string().max(5000).optional().or(z.literal("")),
@@ -197,6 +210,7 @@ const DEFAULT_VALUES: SettingsForm = {
     buttonText: "",
     buttonLink: "",
   },
+  heroSlides: [],
   aboutUs: {
     title: "",
     content: "",
@@ -266,6 +280,15 @@ export default function AdminSettingsPage() {
     name: "businessHours",
   });
 
+  const {
+    fields: slideFields,
+    append: appendSlide,
+    remove: removeSlide,
+  } = useFieldArray({
+    control,
+    name: "heroSlides",
+  });
+
   const activeProvider = watch("paymentSettings.activeProvider");
   const pickupEnabled = watch("pickupEnabled");
   const deliveryEnabled = watch("deliveryEnabled");
@@ -300,6 +323,7 @@ export default function AdminSettingsPage() {
             ...DEFAULT_VALUES.heroContent,
             ...data.heroContent,
           },
+          heroSlides: data.heroSlides || [],
           aboutUs: {
             ...DEFAULT_VALUES.aboutUs,
             ...data.aboutUs,
@@ -721,7 +745,7 @@ export default function AdminSettingsPage() {
       <Card className="p-6" glass>
         <SectionHeader
           icon={<Layout size={18} />}
-          title="Hero Section"
+          title="Hero Section Text"
           subtitle="Customize the main banner text on your homepage"
         />
         <div className="grid gap-5 lg:grid-cols-2">
@@ -749,6 +773,117 @@ export default function AdminSettingsPage() {
             {...register("heroContent.buttonLink")}
             error={errors.heroContent?.buttonLink?.message}
           />
+        </div>
+      </Card>
+
+      {/* ── 9.5 Hero Slides ── */}
+      <Card className="p-6" glass>
+        <SectionHeader
+          icon={<Layout size={18} />}
+          title="Hero Slider Images"
+          subtitle="Upload up to 5 images for the hero section with optional captions"
+        />
+
+        <div className="space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {slideFields.map((field, index) => (
+              <div
+                key={field.id}
+                className="relative group p-4 border border-border rounded-2xl bg-surface-secondary"
+              >
+                <button
+                  type="button"
+                  onClick={() => removeSlide(index)}
+                  className="absolute -top-2 -right-2 p-1.5 bg-error-500 text-white rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                >
+                  <Trash2 size={14} />
+                </button>
+
+                <div className="aspect-[4/3] rounded-xl overflow-hidden mb-4 border border-border bg-surface">
+                  <img
+                    src={watch(`heroSlides.${index}.image.url`)}
+                    alt="Hero slide"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <Input
+                    label="Main Caption"
+                    placeholder="e.g. Summer Collection"
+                    {...register(`heroSlides.${index}.mainCaption`)}
+                    error={errors.heroSlides?.[index]?.mainCaption?.message}
+                  />
+                  <Input
+                    label="Sub Caption"
+                    placeholder="e.g. Up to 50% off"
+                    {...register(`heroSlides.${index}.subCaption`)}
+                    error={errors.heroSlides?.[index]?.subCaption?.message}
+                  />
+                </div>
+              </div>
+            ))}
+
+            {slideFields.length < 5 && (
+              <label className="relative aspect-[4/3] rounded-2xl border-2 border-dashed border-border hover:border-primary-500 hover:bg-primary-500/5 transition-all flex flex-col items-center justify-center cursor-pointer text-muted-foreground hover:text-primary-500 p-6">
+                <div className="text-center">
+                  <Plus className="h-10 w-10 mx-auto mb-2" />
+                  <span className="text-sm font-bold uppercase tracking-wider">
+                    Add Hero Slide
+                  </span>
+                  <p className="text-[10px] mt-1">Recommended: 1200x800px</p>
+                </div>
+                <input
+                  type="file"
+                  className="hidden"
+                  accept="image/*"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+
+                    const toastId = toast.loading("Uploading hero image...");
+                    try {
+                      const formData = new FormData();
+                      formData.append("file", file);
+                      formData.append("folder", "hero");
+
+                      const res = await apiClient.post(
+                        "/admin/upload",
+                        formData,
+                        {
+                          headers: { "Content-Type": "multipart/form-data" },
+                        },
+                      );
+
+                      if (res.data?.success) {
+                        appendSlide({
+                          image: res.data.data,
+                          mainCaption: "",
+                          subCaption: "",
+                        });
+                        toast.success("Hero image uploaded", { id: toastId });
+                      }
+                    } catch (err: any) {
+                      toast.error(
+                        err?.response?.data?.message || "Upload failed",
+                        { id: toastId },
+                      );
+                    }
+                  }}
+                />
+              </label>
+            )}
+          </div>
+
+          {slideFields.length === 0 && (
+            <div className="flex flex-col items-center justify-center p-12 border border-dashed border-border rounded-2xl bg-surface-secondary text-muted-foreground">
+              <Layout size={40} className="mb-4 opacity-20" />
+              <p className="text-sm font-medium">No hero slides added yet.</p>
+              <p className="text-xs mt-1">
+                Upload images to create an auto-sliding hero section.
+              </p>
+            </div>
+          )}
         </div>
       </Card>
 

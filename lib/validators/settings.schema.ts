@@ -13,6 +13,15 @@ const BusinessHourSchema = z.object({
   isClosed: z.boolean().default(false),
 });
 
+const HeroSlideSchema = z.object({
+  image: z.object({
+    url: z.string().url("Invalid image URL"),
+    publicId: z.string(),
+  }),
+  mainCaption: z.string().max(100).optional().or(z.literal("")),
+  subCaption: z.string().max(200).optional().or(z.literal("")),
+});
+
 export const StoreSettingsSchema = z.object({
   storeName: z.string().min(2, "Store name must be at least 2 characters"),
   logo: z
@@ -48,6 +57,7 @@ export const StoreSettingsSchema = z.object({
       ogImage: z.string().optional(),
     })
     .optional(),
+  heroSlides: z.array(HeroSlideSchema).max(5).optional(),
   paymentSettings: z
     .object({
       activeProvider: z.enum(["monnify", "paystack"]).default("monnify"),

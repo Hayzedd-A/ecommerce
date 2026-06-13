@@ -358,20 +358,16 @@ export async function POST(req: NextRequest) {
       let checkoutUrl = "";
       let checkoutSuccess = false;
       try {
-        const [user, guest] = await Promise.all([
-          User.findById(userId),
-          Guest.findOne({ guestId: userId }),
-        ]);
-        const currentUser = user || guest;
-        if (!currentUser) {
+        const orderUser = await order.getOrderUser();
+        if (!orderUser) {
           throw new Error("User not found for payment initialization");
         }
         const activeProvider = await paymentManager.getActivatedProvider();
 
         const paymentResult = await activeProvider.initializePayment({
           amount: total,
-          customerEmail: currentUser.email || userEmail!,
-          customerName: currentUser.name || shippingAddress.fullName,
+          customerEmail: orderUser.email || userEmail!,
+          customerName: orderUser.name || shippingAddress.fullName,
           paymentReference,
           callbackUrl: PAYMENT_CALLBACK_URL,
           description: `Order ${orderNumber} payment`,

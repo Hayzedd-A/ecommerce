@@ -71,15 +71,27 @@ export const upsertGuest = async (
   { email, name, phone }: { email?: string; name?: string; phone?: string },
 ) => {
   try {
-    const guest = await Guest.findOneAndUpdate(
-      { guestId: req.headers.get("x-guest-id") },
-      {
+    let guest = null;
+    if (email) {
+      guest = await Guest.findOne({ email });
+    } else {
+      guest = await Guest.findOne({ guestId: req.headers.get("x-guest-id") });
+    }
+    if (guest) {
+      guest.updateOne({
         ...(email && { email }),
         ...(name && { name }),
         ...(phone && { phone }),
-      },
-      { upsert: true },
-    );
+      });
+    } else {
+      guest = new Guest({
+        guestId: req.headers.get("x-guest-id"),
+        email,
+        phone,
+        name,
+      });
+      await guest.save();
+    }
     return guest;
   } catch (error) {
     return error;

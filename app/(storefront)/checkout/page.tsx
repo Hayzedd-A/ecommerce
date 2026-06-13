@@ -33,13 +33,19 @@ import BankTransferModal from "@/components/storefront/BankTransferModal";
 import { IDeliveryLocation } from "@/lib/types";
 import { CheckoutMethod } from "@/lib/utils/constants";
 import CheckoutConfirmationModal from "@/components/storefront/CheckoutConfirmationModal";
+import { SocialIcon } from "react-social-icons";
 
 export default function CheckoutPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { formatMoney } = useStoreSettings();
   const dispatch = useAppDispatch();
-  const { deliveryEnabled, pickupEnabled, checkoutMethod } = useStoreSettings();
+  const {
+    deliveryEnabled,
+    pickupEnabled,
+    checkoutMethod,
+    phone: storeWhatsappNumber,
+  } = useStoreSettings();
 
   const { items, subtotal } = useAppSelector((state) => state.cart);
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
@@ -131,60 +137,6 @@ export default function CheckoutPage() {
     },
   });
 
-  const handleCreateOrder = async ({
-    paymentRef,
-    file,
-    checkoutMethod,
-  }: {
-    paymentRef?: string | null;
-    file?: File | null;
-    checkoutMethod?: (typeof CheckoutMethod)[number];
-  }) => {
-    try {
-      const data = { ...getValues(), checkoutMethod };
-      const isValid = CheckoutSchema.safeParse(data);
-      console.log(data, isValid);
-
-      if (!isValid.success) {
-        toast.error(isValid.error.message);
-        return;
-      }
-      // 1. Create order (bank transfer, payment on delivery)
-      const payload = { ...data, paymentRef };
-      const createRes = await apiClient.post("/orders", payload);
-      if (!createRes.data?.success) {
-        throw new Error(createRes.data?.message || "Failed to create order");
-      }
-      const orderId = createRes.data.orderId as string;
-
-      // 2. Upload evidence if provided
-      if (file) {
-        const fd = new FormData();
-        fd.append("file", file);
-        fd.append("reference", paymentRef as string);
-        const uploadRes = await apiClient.post(`/payments/evidence`, fd, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-        if (!uploadRes.data?.success) {
-          throw new Error(uploadRes.data?.message || "Upload failed");
-        }
-      }
-
-      dispatch(clearCart());
-      return {
-        success: true,
-        message: "Order placed. Awaiting payment verification.",
-        paymentReference: createRes.data?.paymentReference,
-      };
-    } catch (err: any) {
-      console.log(err?.response?.data);
-      return {
-        success: false,
-        message: err?.response?.data?.error || "Failed to place order",
-      };
-    }
-  };
-
   const validateAndOpenConfirm = () => {
     const validationResult = CheckoutSchema.safeParse(getValues());
     if (validationResult.success) {
@@ -252,6 +204,104 @@ export default function CheckoutPage() {
     }
   };
 
+  const handleWhatsappOrder = async () => {
+    const validationResult = CheckoutSchema.safeParse({
+      ...getValues(),
+      checkoutMethod: "whatsapp",
+    });
+
+    if (!validationResult.success) {
+      toast.error(validationResult.error.issues[0]?.message || "Please fill in all required fields.");
+      return;
+    }
+
+    const formValues = getValues();
+    const deliveryFee = selectedDeliveryLocation?.price ?? 0;
+    const total = subtotal + deliveryFee - couponDiscount;
+    const orderDate = new Date().toLocaleString("en-NG", {
+      dateStyle: "full",
+      timeStyle: "short",
+    });
+
+    // ── Item rows ─────────────────────────────────────────────────────────────
+    const itemLines = items
+      .map((item, idx) => {
+        const variant = item.variantLabel ? ` (${item.variantLabel})` : "";
+        const lineTotal = formatMoney(item.price * item.quantity);
+        return `  ${idx + 1}. ${item.name}${variant}\n     Qty: ${item.quantity}  ×  ${formatMoney(item.price)}  =  *${lineTotal}*`;
+      })
+      .join("\n\n");
+
+    // ── Delivery info ─────────────────────────────────────────────────────────
+    const deliveryLine =
+      deliveryMethod === "delivery"
+        ? selectedDeliveryLocation
+          ? `📦 *${selectedDeliveryLocation.name}*\n   📍 ${selectedDeliveryLocation.city}, ${selectedDeliveryLocation.state}`
+          : "📦 Delivery (location not selected)"
+        : `🏪 *Store Pickup*`;
+
+    // ── Customer info ─────────────────────────────────────────────────────────
+    const addr = formValues.shippingAddress;
+    const guestEmail = formValues.guestEmail;
+    const guestPhone = formValues.guestPhone;
+
+    const customerLines = [
+      `👤 *Name:* ${addr?.fullName || "—"}`,
+      `📞 *Phone:* ${addr?.phone || guestPhone || "—"}`,
+      ...(guestEmail ? [`✉️  *Email:* ${guestEmail}`] : []),
+      ...(addr?.street ? [`🏠 *Address:* ${addr.street}${addr.city ? `, ${addr.city}` : ""}${addr.state ? `, ${addr.state}` : ""}`] : []),
+    ].join("\n");
+
+    // ── Price summary ─────────────────────────────────────────────────────────
+    const couponLine =
+      couponDiscount > 0
+        ? `\n🎟️  *Coupon (${couponCode.toUpperCase()}):*   -${formatMoney(couponDiscount)}`
+        : "";
+
+    const message = `
+🛍️ *NEW ORDER REQUEST*
+${"━".repeat(30)}
+
+🗓️ *Date:* ${orderDate}
+
+${"─".repeat(30)}
+📋 *ORDER ITEMS*
+${"─".repeat(30)}
+
+${itemLines}
+
+${"─".repeat(30)}
+💰 *PRICE SUMMARY*
+${"─".repeat(30)}
+
+🧾 *Subtotal:*       ${formatMoney(subtotal)}
+🚚 *Delivery Fee:*   ${deliveryFee > 0 ? formatMoney(deliveryFee) : "FREE"}${couponLine}
+${"─".repeat(30)}
+💳 *TOTAL:*          *${formatMoney(total)}*
+${"─".repeat(30)}
+
+📦 *DELIVERY METHOD*
+${deliveryLine}
+
+${"─".repeat(30)}
+🙋 *CUSTOMER DETAILS*
+${"─".repeat(30)}
+
+${customerLines}
+
+${"─".repeat(30)}
+💬 *Payment Method:* WhatsApp Order
+${"─".repeat(30)}
+
+✅ Kindly confirm this order and provide payment details.
+Thank you! 🙏
+`.trim();
+
+    const whatsappNumber = storeWhatsappNumber?.replace(/\D/g, "");
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
+    window.open(whatsappUrl, "_blank");
+  };
+
   const handleCompleteBankTransfer = async ({
     ref,
     file,
@@ -287,30 +337,6 @@ export default function CheckoutPage() {
       );
     } finally {
       setIsLoading((prev) => ({ ...prev, placeOrder: false }));
-    }
-  };
-
-  const handlePayOnDelivery = async () => {
-    try {
-      setIsLoading((prev) => ({ ...prev, payOnDelivery: true }));
-      setValue("checkoutMethod", "pay_on_delivery");
-      const res = await handleCreateOrder({
-        checkoutMethod: "pay_on_delivery",
-      });
-      if (!res?.success) {
-        toast.error(res?.message);
-      } else {
-        router.push(
-          `/checkout/success?ref=${encodeURIComponent(
-            res?.paymentReference || "",
-          )}`,
-        );
-      }
-    } catch (error: any) {
-      console.error("Error in handlePayOnDelivery:", error);
-      toast.error(error?.response?.data?.error || "Failed to place order");
-    } finally {
-      setIsLoading((prev) => ({ ...prev, payOnDelivery: false }));
     }
   };
 
@@ -651,45 +677,6 @@ export default function CheckoutPage() {
       });
     } finally {
       setIsVerifyingCoupon(false);
-    }
-  };
-
-  // online checkout method
-  const handlePlaceOrder = async (data: CheckoutInput) => {
-    setIsLoading((prev) => ({ ...prev, placeOrder: true }));
-    try {
-      const payload = {
-        ...data,
-        deliveryMethod,
-        deliveryLocationId: selectedDeliveryLocation?._id,
-        deliveryFee: selectedDeliveryLocation?.price,
-        discount: couponDiscount,
-        couponUsed: couponDiscount > 0 ? couponCode.toUpperCase() : undefined,
-        total:
-          subtotal + (selectedDeliveryLocation?.price ?? 0) - couponDiscount,
-        subtotal,
-      };
-
-      const response = await apiClient.post("/payments/initialize", payload);
-      const resData = response.data;
-
-      if (resData.success) {
-        toast.success("Order created! Redirecting to checkout portal...");
-        if (resData.checkoutUrl) {
-          router.push(resData.checkoutUrl);
-        } else {
-          dispatch(clearCart());
-          router.push(`/checkout/success?ref=${resData.paymentReference}`);
-        }
-      } else {
-        toast.error(resData.message || "Checkout failed to initialize");
-      }
-    } catch (error: any) {
-      toast.error(
-        error.response?.data?.error || "Something went wrong during checkout.",
-      );
-    } finally {
-      setIsLoading((prev) => ({ ...prev, placeOrder: false }));
     }
   };
 
@@ -1141,20 +1128,6 @@ export default function CheckoutPage() {
                           <span className="font-medium">Bank Transfer</span>
                         </label>
                       )}
-                      {checkoutMethod.acceptWhatsappOrder && (
-                        <label className="flex items-center gap-3 p-3 border rounded-xl cursor-pointer">
-                          <input
-                            type="radio"
-                            name="checkoutMethod"
-                            value="whatsapp"
-                            checked={selectedCheckoutMethod === "whatsapp"}
-                            onChange={() =>
-                              setSelectedCheckoutMethod("whatsapp")
-                            }
-                          />
-                          <span className="font-medium">Send via WhatsApp</span>
-                        </label>
-                      )}
                     </div>
                   </div>
 
@@ -1169,6 +1142,29 @@ export default function CheckoutPage() {
                     >
                       Confirm & Checkout {formatMoney(totalAmount)}
                     </Button>
+                    {checkoutMethod.acceptWhatsappOrder && (
+                      <>
+                        <div className="flex justify-center items-center gap-2 my-6">
+                          <hr className="w-full" />
+                          <p className="text-sm font-medium px-4">Or</p>
+                          <hr className="w-full" />
+                        </div>
+                        <Button
+                          type="button"
+                          variant="primary"
+                          className="w-full py-4 uppercase font-bold tracking-wider h-14"
+                          onClick={handleWhatsappOrder}
+                          leftIcon={
+                            <SocialIcon
+                              url="https://whatsapp.com"
+                              style={{ height: 30, width: 30 }}
+                            />
+                          }
+                        >
+                          Place Order via WhatsApp
+                        </Button>
+                      </>
+                    )}
                   </div>
 
                   <CheckoutConfirmationModal

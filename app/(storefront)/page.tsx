@@ -18,8 +18,7 @@ import Image from "next/image";
 import { CategoryGrid } from "@/components/storefront/CategoryGrid";
 import { ICategory, IProduct } from "@/lib/types";
 import getStoreSettings from "@/lib/settings.server";
-
-// Mock fallbacks if Database is not seeded/empty
+import { HeroSlider } from "@/components/storefront/HeroSlider";
 
 async function getHomeData() {
   try {
@@ -113,25 +112,28 @@ export default async function HomePage() {
             </div>
           </div>
 
-          {/* Hero Banner Showcase card */}
-          <div className="relative mx-auto lg:mr-0 w-full max-w-md aspect-square rounded-2xl overflow-hidden shadow-overlay border border-border/80 group">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&auto=format&fit=crop&q=80"
-              alt="Hero collection"
-              className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent flex flex-col justify-end p-8 text-white">
-              <span className="text-xs uppercase font-bold tracking-widest text-primary-400">
-                Exclusive Deals
-              </span>
-              <h3 className="text-xl font-bold mt-1">
-                Up to 40% Off New Items
-              </h3>
-              <p className="text-sm text-neutral-300 mt-1">
-                Free delivery on qualifying checkout sessions.
-              </p>
-            </div>
+          {/* Hero Banner Slider / Showcase card */}
+          <div className="relative mx-auto lg:mr-0 w-full">
+            {settings?.heroSlides && settings.heroSlides.length > 0 ? (
+              <HeroSlider slides={settings.heroSlides} />
+            ) : (
+              <div className="relative mx-auto lg:mr-0 w-full max-w-md aspect-square rounded-2xl overflow-hidden shadow-overlay border border-border/80 group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=600&auto=format&fit=crop&q=80"
+                  alt="Hero collection"
+                  className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                />
+                <div className="absolute inset-0 bg-linear-to from-black/60 via-black/10 to-transparent flex flex-col justify-end p-8 text-white">
+                  <span className="text-xs uppercase font-bold tracking-widest text-primary-400">
+                    Exclusive Deals
+                  </span>
+                  <h3 className="text-xl font-bold mt-1">
+                    Up to 40% Off New Items
+                  </h3>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </section>

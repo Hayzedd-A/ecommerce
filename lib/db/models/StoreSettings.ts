@@ -79,6 +79,14 @@ export interface IStoreSettingsDocument extends Document {
     buttonText?: string;
     buttonLink?: string;
   };
+  heroSlides?: {
+    image: {
+      url: string;
+      publicId: string;
+    };
+    mainCaption?: string;
+    subCaption?: string;
+  }[];
   aboutUs?: {
     title?: string;
     content?: string;
@@ -216,6 +224,16 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       buttonText: String,
       buttonLink: String,
     },
+    heroSlides: [
+      {
+        image: {
+          url: String,
+          publicId: String,
+        },
+        mainCaption: String,
+        subCaption: String,
+      },
+    ],
     aboutUs: {
       title: String,
       content: String,

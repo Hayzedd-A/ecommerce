@@ -95,7 +95,7 @@ const CheckoutConfirmationModal = ({
         paper: {
           sx: {
             borderRadius: "24px",
-            overflow: "hidden",
+            overflow: "auto",
             bgcolor: "var(--background)",
             backgroundImage: "none",
           },
@@ -133,7 +133,7 @@ const CheckoutConfirmationModal = ({
               </div>
             </div>
 
-            <div className="p-8 space-y-8">
+            <div className="py-2 md:p-8 space-y-8">
               {/* Summary Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-surface-secondary rounded-2xl p-4 border border-border flex flex-col gap-1">

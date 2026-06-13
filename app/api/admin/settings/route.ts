@@ -49,6 +49,7 @@ export async function PUT(req: NextRequest) {
       "personalAccount",
       "paymentSettings",
       "heroContent",
+      "heroSlides",
       "aboutUs",
     ];
     for (const k of allowed) {

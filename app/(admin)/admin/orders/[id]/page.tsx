@@ -601,7 +601,7 @@ export default function AdminOrderDetailPage() {
           paper: {
             sx: {
               borderRadius: "24px",
-              overflow: "hidden",
+              overflow: "auto",
               bgcolor: "var(--background)",
               backgroundImage: "none",
             },
