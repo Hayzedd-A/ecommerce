@@ -25,23 +25,53 @@ import { toast } from "react-hot-toast";
 import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 // import { useTheme } from "@/components/providers/ThemeProvider";
 import { clearUser } from "@/lib/store/slices/authSlice";
+import { fetchAdminNotificationCount } from "@/lib/store/slices/notificationSlice";
 import apiClient from "@/lib/api/client";
 import { cn } from "@/lib/utils/helpers";
 import { useTheme } from "next-themes";
 
 const SIDEBAR_LINKS = [
-  { label: "Dashboard", href: "/admin", icon: LayoutDashboard },
-  { label: "Products", href: "/admin/products", icon: ShoppingBag },
-  { label: "Categories", href: "/admin/categories", icon: FolderOpen },
-  { label: "Orders", href: "/admin/orders", icon: ClipboardList },
-  { label: "Customers", href: "/admin/customers", icon: Users },
-  { label: "Coupons", href: "/admin/coupons", icon: Ticket },
+  {
+    label: "Dashboard",
+    href: "/admin",
+    icon: LayoutDashboard,
+  },
+  {
+    label: "Products",
+    href: "/admin/products",
+    icon: ShoppingBag,
+  },
+  {
+    label: "Categories",
+    href: "/admin/categories",
+    icon: FolderOpen,
+  },
+  {
+    label: "Orders",
+    href: "/admin/orders",
+    icon: ClipboardList,
+    notificationKey: "orders",
+  },
+  {
+    label: "Customers",
+    href: "/admin/customers",
+    icon: Users,
+  },
+  {
+    label: "Coupons",
+    href: "/admin/coupons",
+    icon: Ticket,
+  },
   {
     label: "Delivery Locations",
     href: "/admin/delivery-locations",
     icon: MapPin,
   },
-  { label: "Settings", href: "/admin/settings", icon: Settings },
+  {
+    label: "Settings",
+    href: "/admin/settings",
+    icon: Settings,
+  },
 ];
 
 export default function AdminLayout({
@@ -57,6 +87,7 @@ export default function AdminLayout({
   const { user, isAuthenticated, isLoading } = useAppSelector(
     (state) => state.auth,
   );
+  const { unreadCount } = useAppSelector((state) => state.notifications);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // Secure admin routing
@@ -70,6 +101,16 @@ export default function AdminLayout({
       }
     }
   }, [isAuthenticated, user, isLoading, router]);
+
+  useEffect(() => {
+    if (isAuthenticated && (user?.role === "admin" || user?.role === "staff")) {
+      dispatch(fetchAdminNotificationCount());
+      const interval = setInterval(() => {
+        dispatch(fetchAdminNotificationCount());
+      }, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [dispatch, isAuthenticated, user]);
 
   const handleLogout = async () => {
     try {
@@ -155,6 +196,25 @@ export default function AdminLayout({
               >
                 <Icon className="h-5 w-5 flex-shrink-0" />
                 <span className="flex-1">{link.label}</span>
+                {link.notificationKey &&
+                  unreadCount[
+                    link.notificationKey as keyof typeof unreadCount
+                  ] > 0 && (
+                    <span
+                      className={cn(
+                        "flex h-5 min-w-[20px] items-center justify-center rounded-full px-1 text-[10px] font-bold",
+                        isActive
+                          ? "bg-white text-primary-500"
+                          : "bg-error-500 text-white",
+                      )}
+                    >
+                      {
+                        unreadCount[
+                          link.notificationKey as keyof typeof unreadCount
+                        ]
+                      }
+                    </span>
+                  )}
                 <ChevronRight
                   className={cn(
                     "h-4 w-4 opacity-0 transition-opacity group-hover:opacity-100",

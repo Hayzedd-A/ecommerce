@@ -3,6 +3,7 @@ import cartReducer from "./slices/cartSlice";
 import authReducer from "./slices/authSlice";
 import uiReducer from "./slices/uiSlice";
 import wishlistReducer from "./slices/wishlistSlice";
+import notificationReducer from "./slices/notificationSlice";
 
 export const makeStore = () => {
   return configureStore({
@@ -11,6 +12,7 @@ export const makeStore = () => {
       auth: authReducer,
       ui: uiReducer,
       wishlist: wishlistReducer,
+      notifications: notificationReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
   });

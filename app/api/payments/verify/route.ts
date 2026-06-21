@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
           }
           await updateProductSalesAndStock(order, session);
           await incrementCouponUsage(order.couponUsed, session);
-          await EmailService.sendOrderConfirmation(
+          await EmailService.sendOrderPlaced(
             orderUser.email || "",
             orderUser.name || "",
             order,

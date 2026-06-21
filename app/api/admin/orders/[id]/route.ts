@@ -3,6 +3,7 @@ import { adminGuard } from "@/lib/auth/requireAdmin";
 import dbConnect from "@/lib/db/connect";
 import Order from "@/lib/db/models/Order";
 import { Types } from "mongoose";
+import { EmailService } from "@/lib/services/email.service";
 
 export async function GET(req: NextRequest) {
   try {
@@ -87,16 +88,40 @@ export async function PUT(req: NextRequest) {
     const allowed: any = {};
     if (body.status) allowed.status = body.status;
     if (body.notes !== undefined) allowed.notes = body.notes;
+    const oldOrder = await Order.findById(id);
+    if (!oldOrder) {
+      return NextResponse.json(
+        { success: false, message: "Order not found" },
+        { status: 404 },
+      );
+    }
+
     const updated = await Order.findByIdAndUpdate(
       id,
       { $set: allowed },
       { new: true },
     );
-    if (!updated)
-      return NextResponse.json(
-        { success: false, message: "Order not found" },
-        { status: 404 },
-      );
+
+    if (
+      updated &&
+      allowed.status === "processing" &&
+      oldOrder.status !== "processing"
+    ) {
+      try {
+        const orderUser = await updated.getOrderUser();
+        if (orderUser && orderUser.email) {
+          await EmailService.sendOrderConfirmation(
+            orderUser.email,
+            orderUser.name || "Customer",
+            updated,
+          );
+        }
+      } catch (error) {
+        console.error("Failed to send order confirmation email:", error);
+        // We don't want to fail the status update if email fails, but maybe we should log it
+      }
+    }
+
     return NextResponse.json({ success: true, data: updated });
   } catch (error: any) {
     console.error("Admin order update error:", error);

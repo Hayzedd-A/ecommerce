@@ -20,6 +20,7 @@ import { useAppSelector, useAppDispatch } from "@/lib/store/hooks";
 import { useStoreSettings } from "@/components/providers/SettingsProvider";
 import { clearUser } from "@/lib/store/slices/authSlice";
 import { toggleCartDrawer } from "@/lib/store/slices/uiSlice";
+import { fetchAdminNotificationCount } from "@/lib/store/slices/notificationSlice";
 import apiClient from "@/lib/api/client";
 import { toast } from "react-hot-toast";
 import { useTheme } from "next-themes";
@@ -33,6 +34,7 @@ export default function Navbar() {
   const { user, isAuthenticated } = useAppSelector((state) => state.auth);
   const { items } = useAppSelector((state) => state.cart);
   const { items: wishlistItems } = useAppSelector((state) => state.wishlist);
+  const { unreadCount } = useAppSelector((state) => state.notifications);
   const { storeName } = useStoreSettings();
 
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -41,7 +43,21 @@ export default function Navbar() {
   const cartCount = items.reduce((sum, item) => sum + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
 
+  const isAdmin =
+    isAuthenticated && user && (user.role === "admin" || user.role === "staff");
+
   const showSearch = pathname === "/" || pathname === "/products";
+
+  React.useEffect(() => {
+    if (isAdmin) {
+      dispatch(fetchAdminNotificationCount());
+      // Optional: Polling every 60 seconds
+      const interval = setInterval(() => {
+        dispatch(fetchAdminNotificationCount());
+      }, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [dispatch, isAdmin]);
 
   const handleLogout = async () => {
     try {
@@ -94,17 +110,20 @@ export default function Navbar() {
           {/* Navigation Actions */}
           <nav className="hidden md:flex items-center gap-4 text-foreground">
             {/* Admin link for admin/staff */}
-            {isAuthenticated &&
-              user &&
-              (user.role === "admin" || user.role === "staff") && (
-                <Link
-                  href="/admin"
-                  className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200"
-                  title="Admin Dashboard"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                </Link>
-              )}
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="p-2 rounded-full hover:bg-surface-secondary text-muted-foreground hover:text-foreground transition-all duration-200 relative"
+                title="Admin Dashboard"
+              >
+                <LayoutDashboard className="h-5 w-5" />
+                {unreadCount.orders > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 bg-error-500 text-white text-[10px] font-bold h-4 w-4 rounded-full flex items-center justify-center animate-scale-in">
+                    {unreadCount.orders}
+                  </span>
+                )}
+              </Link>
+            )}
 
             {/* Theme Toggle */}
             <button
@@ -252,13 +271,18 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <>
-                {user && (user.role === "admin" || user.role === "staff") && (
+                {isAdmin && (
                   <Link
                     href="/admin"
                     onClick={() => setIsMobileMenuOpen(false)}
-                    className="px-4 py-2 rounded-lg hover:bg-surface-secondary text-foreground"
+                    className="px-4 py-2 rounded-lg hover:bg-surface-secondary text-foreground flex items-center justify-between"
                   >
                     Admin Dashboard
+                    {unreadCount.orders > 0 && (
+                      <span className="bg-error-500 text-white text-xs px-2 py-0.5 rounded-full font-bold">
+                        {unreadCount.orders}
+                      </span>
+                    )}
                   </Link>
                 )}
                 <Link

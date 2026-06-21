@@ -16,8 +16,11 @@ import {
   paymentStatusLabels,
 } from "@/lib/utils/helpers";
 import { IOrderObject, OrderStatus, OrderStatusEnum } from "@/lib/types";
+import { useAppDispatch } from "@/lib/store/hooks";
+import { markAdminNotificationsAsRead } from "@/lib/store/slices/notificationSlice";
 
 export default function AdminOrdersPage() {
+  const dispatch = useAppDispatch();
   const [orders, setOrders] = useState<IOrderObject[]>([]);
   const [statusFilter, setStatusFilter] = useState<OrderStatus | "all">("all");
   const [page, setPage] = useState(1);
@@ -44,7 +47,9 @@ export default function AdminOrdersPage() {
 
   useEffect(() => {
     fetchOrders();
-  }, [page, statusFilter, refetch]);
+    // Mark order notifications as read
+    dispatch(markAdminNotificationsAsRead("order_new"));
+  }, [page, statusFilter, refetch, dispatch]);
 
   const updateStatus = async (orderId: string, status: OrderStatus) => {
     setIsUpdating(true);

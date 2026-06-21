@@ -90,7 +90,7 @@ export async function POST(req: NextRequest) {
     await payment.save({ session });
     await session.commitTransaction();
     const orderUser = await order.getOrderUser();
-    EmailService.sendOrderConfirmation(
+    EmailService.sendOrderPlaced(
       orderUser.email!,
       orderUser.name!,
       order,

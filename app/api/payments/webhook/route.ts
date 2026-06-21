@@ -105,7 +105,7 @@ export async function POST(req: NextRequest) {
 
           // Send confirmation email asynchronously
           if (resolvedEmail) {
-            await EmailService.sendOrderConfirmation(
+            await EmailService.sendOrderPlaced(
               resolvedEmail,
               resolvedName,
               order,

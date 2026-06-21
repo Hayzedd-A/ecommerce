@@ -19,12 +19,14 @@ import {
   ProductVariant,
   User,
   Guest,
+  Notification,
 } from "@/lib/db/models";
 import mongoose from "mongoose";
 import { generatePaymentReference } from "@/lib/utils/server-helpers";
 import { upsertGuest } from "@/lib/auth/mergeGuest";
 import { getRequestUser } from "@/lib/auth/getIdentity";
 import getStoreSettings from "@/lib/settings.server";
+import { EmailService } from "@/lib/services/email.service";
 
 export async function POST(req: NextRequest) {
   const session = await mongoose.startSession();
@@ -352,6 +354,23 @@ export async function POST(req: NextRequest) {
     await order.save({ session });
     await payment.save({ session });
 
+    // Create admin notification
+    await Notification.create(
+      [
+        {
+          type: "order_new",
+          title: "New Order Placed",
+          message: `Order ${orderNumber} has been placed for ${total} NGN.`,
+          metadata: {
+            orderId: order._id,
+            orderNumber: orderNumber,
+            total: total,
+          },
+        },
+      ],
+      { session },
+    );
+
     // Handle different checkout methods
     if (method === "online") {
       // Initialize provider payment for online payments
@@ -408,6 +427,22 @@ export async function POST(req: NextRequest) {
       payment.status = "pending";
       await payment.save({ session });
       await session.commitTransaction();
+
+      if (method === "pay_on_delivery") {
+        try {
+          const orderUser = await order.getOrderUser();
+          if (orderUser && orderUser.email) {
+            await EmailService.sendOrderPlaced(
+              orderUser.email,
+              orderUser.name || shippingAddress.fullName,
+              order,
+            );
+          }
+        } catch (error) {
+          console.error("Failed to send POD order placed email:", error);
+        }
+      }
+
       return NextResponse.json({
         success: true,
         message:
