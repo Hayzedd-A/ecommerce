@@ -2,6 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { adminGuard } from "@/lib/auth/requireAdmin";
 import { UploadService } from "@/lib/services/upload.service";
 
+export async function GET(req: NextRequest) {
+  try {
+    const guard = await adminGuard(req);
+    if (guard) return guard;
+
+    const { searchParams } = new URL(req.url);
+    const folder = searchParams.get("folder") || "products";
+
+    const signatureData = UploadService.generateSignature(folder);
+
+    return NextResponse.json({ success: true, data: signatureData });
+  } catch (error: any) {
+    console.error("Signature error:", error);
+    return NextResponse.json(
+      { success: false, message: error.message || "Failed to generate signature" },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(req: NextRequest) {
   try {
     const guard = await adminGuard(req);

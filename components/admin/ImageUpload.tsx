@@ -30,25 +30,49 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
     setIsUploading(true);
     try {
       const file = files[0];
+
+      // 1. Get signed upload signature from our API
+      const sigResponse = await apiClient.get(`/admin/upload?folder=${folder}`);
+      if (!sigResponse.data?.success) {
+        throw new Error("Failed to get upload signature");
+      }
+
+      const { signature, timestamp, apiKey, cloudName, folder: targetFolder } = sigResponse.data.data;
+
+      // 2. Upload directly to Cloudinary
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("folder", folder);
+      formData.append("signature", signature);
+      formData.append("timestamp", timestamp.toString());
+      formData.append("api_key", apiKey);
+      formData.append("folder", targetFolder);
 
-      const response = await apiClient.post("/admin/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
+      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+      
+      // Use raw fetch for direct Cloudinary upload to avoid interceptors issues if any
+      const uploadResponse = await fetch(cloudinaryUrl, {
+        method: "POST",
+        body: formData,
       });
 
-      if (response.data?.success) {
-        const newImage = {
-          ...response.data.data,
-          order: value.length,
-          alt: "",
-        };
-        onChange([...value, newImage]);
-        toast.success("Image uploaded");
+      const uploadData = await uploadResponse.json();
+
+      if (uploadData.error) {
+        throw new Error(uploadData.error.message);
       }
+
+      const newImage = {
+        url: uploadData.secure_url,
+        publicId: uploadData.public_id,
+        order: value.length,
+        alt: "",
+      };
+      
+      onChange([...value, newImage]);
+      toast.success("Image uploaded");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Upload failed");
+      console.error("Upload error:", error);
+      toast.error(error?.message || "Upload failed");
     } finally {
       setIsUploading(false);
     }

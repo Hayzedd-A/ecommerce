@@ -140,7 +140,10 @@ export default function AdminOrdersPage() {
                       {order.orderNumber}
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
-                      {order.shippingAddress?.fullName || "Guest"}
+                      {order.shippingAddress?.fullName || "Guest"} <br />
+                      <span className="text-xs text-muted-foreground line-clamp-2">
+                        {order.shippingAddress?.street}
+                      </span>
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
                       {formatDate(order.createdAt)}

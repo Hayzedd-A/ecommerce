@@ -183,7 +183,7 @@ export default function AdminEditProductPage() {
         <Card className="p-6" glass>
           <div className="grid gap-6">
             <h2 className="text-xl font-bold border-b pb-2">
-              Pricing & aunventory
+              Pricing & Inventory
             </h2>
             <div className="grid gap-6 lg:grid-cols-2">
               <Input

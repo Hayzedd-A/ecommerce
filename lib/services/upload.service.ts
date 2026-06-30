@@ -97,4 +97,26 @@ export class UploadService {
       return false;
     }
   }
+
+  /**
+   * Generate signature for direct frontend upload to Cloudinary
+   */
+  static generateSignature(folder: string = "products") {
+    const timestamp = Math.round(new Date().getTime() / 1000);
+    const signature = cloudinary.utils.api_sign_request(
+      {
+        timestamp,
+        folder: `ecommerce/${folder}`,
+      },
+      process.env.CLOUDINARY_API_SECRET!,
+    );
+
+    return {
+      signature,
+      timestamp,
+      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
+      apiKey: process.env.CLOUDINARY_API_KEY,
+      folder: `ecommerce/${folder}`,
+    };
+  }
 }

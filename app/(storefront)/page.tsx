@@ -31,7 +31,7 @@ async function getHomeData() {
       .lean();
 
     const products = await Product.aggregate([
-      { $match: { status: "active" } },
+      { $match: [{ status: "active" }, { isFeatured: true }] },
       { $sort: { createdAt: -1 } },
       { $limit: 8 },
       {

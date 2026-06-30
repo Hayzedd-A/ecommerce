@@ -843,29 +843,41 @@ export default function AdminSettingsPage() {
 
                     const toastId = toast.loading("Uploading hero image...");
                     try {
+                      // 1. Get signed upload signature
+                      const sigRes = await apiClient.get("/admin/upload?folder=hero");
+                      if (!sigRes.data?.success) throw new Error("Failed to get upload signature");
+
+                      const { signature, timestamp, apiKey, cloudName, folder: targetFolder } = sigRes.data.data;
+
+                      // 2. Upload directly to Cloudinary
                       const formData = new FormData();
                       formData.append("file", file);
-                      formData.append("folder", "hero");
+                      formData.append("signature", signature);
+                      formData.append("timestamp", timestamp.toString());
+                      formData.append("api_key", apiKey);
+                      formData.append("folder", targetFolder);
 
-                      const res = await apiClient.post(
-                        "/admin/upload",
-                        formData,
-                        {
-                          headers: { "Content-Type": "multipart/form-data" },
+                      const cloudinaryUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+                      const uploadRes = await fetch(cloudinaryUrl, {
+                        method: "POST",
+                        body: formData,
+                      });
+
+                      const uploadData = await uploadRes.json();
+                      if (uploadData.error) throw new Error(uploadData.error.message);
+
+                      appendSlide({
+                        image: {
+                          url: uploadData.secure_url,
+                          publicId: uploadData.public_id,
                         },
-                      );
-
-                      if (res.data?.success) {
-                        appendSlide({
-                          image: res.data.data,
-                          mainCaption: "",
-                          subCaption: "",
-                        });
-                        toast.success("Hero image uploaded", { id: toastId });
-                      }
+                        mainCaption: "",
+                        subCaption: "",
+                      });
+                      toast.success("Hero image uploaded", { id: toastId });
                     } catch (err: any) {
                       toast.error(
-                        err?.response?.data?.message || "Upload failed",
+                        err?.message || "Upload failed",
                         { id: toastId },
                       );
                     }
