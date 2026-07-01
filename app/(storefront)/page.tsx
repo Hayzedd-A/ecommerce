@@ -31,9 +31,9 @@ async function getHomeData() {
       .lean();
 
     const products = await Product.aggregate([
-      { $match: [{ status: "active" }, { isFeatured: true }] },
-      { $sort: { createdAt: -1 } },
-      { $limit: 8 },
+      { $match: { status: "active" } },
+      { $sort: { createdAt: -1, isFeatured: -1 } },
+      { $limit: 6 },
       {
         $lookup: {
           from: "productvariants",
@@ -45,6 +45,11 @@ async function getHomeData() {
     ]);
 
     const settings = await getStoreSettings();
+    console.log({
+      categories: JSON.parse(JSON.stringify(categories)) as ICategory[],
+      products: JSON.parse(JSON.stringify(products)) as IProduct[],
+      settings,
+    });
 
     return {
       categories: JSON.parse(JSON.stringify(categories)) as ICategory[],

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
@@ -78,6 +78,12 @@ export default function Navbar() {
       setIsMobileMenuOpen(false);
     }
   };
+
+  useEffect(() => {
+    if (searchQuery.trim().length === 0) {
+      router.push(`/products`);
+    }
+  }, [searchQuery]);
 
   return (
     <header className="sticky top-0 z-40 w-full glass border-b border-border transition-colors duration-200">
