@@ -141,7 +141,7 @@ export default function AdminOrdersPage() {
                     </td>
                     <td className="px-4 py-4 text-sm text-muted-foreground">
                       {order.shippingAddress?.fullName || "Guest"} <br />
-                      <span className="text-xs text-muted-foreground line-clamp-2">
+                      <span className="text-xs font-mono line-clamp-2">
                         {order.shippingAddress?.street}
                       </span>
                     </td>
