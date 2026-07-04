@@ -29,7 +29,7 @@ export const ORDER_STATUSES = [
 ] as const;
 
 /** Payment providers */
-export const PAYMENT_PROVIDERS = ["monnify", "paystack"] as const;
+export const PAYMENT_PROVIDERS = ["monnify", "paystack", "opay"] as const;
 
 /** Review limits */
 export const MAX_REVIEW_RATING = 5;

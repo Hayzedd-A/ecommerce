@@ -61,7 +61,7 @@ export interface IStoreSettingsDocument extends Document {
     accountName: string;
   };
   paymentSettings: {
-    activeProvider: "monnify" | "paystack";
+    activeProvider: "monnify" | "paystack" | "opay";
     monnify?: {
       apiKey: string;
       secretKey: string;
@@ -71,6 +71,12 @@ export interface IStoreSettingsDocument extends Document {
     paystack?: {
       secretKey: string;
       publicKey: string;
+    };
+    opay?: {
+      publicKey: string;
+      secretKey: string;
+      merchantId: string;
+      baseUrl: string;
     };
   };
   heroContent?: {
@@ -201,7 +207,7 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
     paymentSettings: {
       activeProvider: {
         type: String,
-        enum: ["monnify", "paystack"],
+        enum: ["monnify", "paystack", "opay"],
         default: "monnify",
       },
       monnify: {
@@ -216,6 +222,15 @@ const StoreSettingsSchema = new Schema<IStoreSettingsDocument>(
       paystack: {
         secretKey: String,
         publicKey: String,
+      },
+      opay: {
+        publicKey: String,
+        secretKey: String,
+        merchantId: String,
+        baseUrl: {
+          type: String,
+          default: "https://sandboxapi.opaycheckout.com",
+        },
       },
     },
     heroContent: {

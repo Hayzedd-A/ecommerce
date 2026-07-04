@@ -1,6 +1,7 @@
 import { PaymentProvider } from "./types";
 import { MonnifyProvider } from "./monnify.provider";
 import { PaystackProvider } from "./paystack.provider";
+import { OpayProvider } from "./opay.provider";
 import StoreSettings from "@/lib/db/models/StoreSettings";
 import getStoreSettings from "@/lib/settings.server";
 
@@ -17,6 +18,10 @@ export class PaymentManager {
     // Register Paystack
     const paystack = new PaystackProvider();
     this.providers.set(paystack.name, paystack);
+
+    // Register OPay
+    const opay = new OpayProvider();
+    this.providers.set(opay.name, opay);
 
     // Default can be set via env var or falls back to monnify
     const envProvider = process.env.PAYMENT_PROVIDER_DEFAULT;
@@ -63,6 +68,8 @@ export class PaymentManager {
       provider.setConfig(settings.paymentSettings.monnify);
     } else if (active === "paystack" && settings.paymentSettings?.paystack) {
       provider.setConfig(settings.paymentSettings.paystack);
+    } else if (active === "opay" && settings.paymentSettings?.opay) {
+      provider.setConfig(settings.paymentSettings.opay);
     }
 
     return provider;
@@ -79,6 +86,8 @@ export class PaymentManager {
       provider.setConfig(settings.paymentSettings.monnify);
     } else if (name === "paystack" && settings.paymentSettings?.paystack) {
       provider.setConfig(settings.paymentSettings.paystack);
+    } else if (name === "opay" && settings.paymentSettings?.opay) {
+      provider.setConfig(settings.paymentSettings.opay);
     }
 
     return provider;

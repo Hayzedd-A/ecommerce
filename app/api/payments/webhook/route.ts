@@ -22,6 +22,17 @@ export async function POST(req: NextRequest) {
       providerName = "monnify";
     } else if (headersList["x-paystack-signature"]) {
       providerName = "paystack";
+    } else {
+      // OPay doesn't send a distinguishing header — its signature lives
+      // inside the JSON payload itself (`sha512` + `payload` fields).
+      try {
+        const parsedBody = JSON.parse(rawBody);
+        if (parsedBody?.sha512 && parsedBody?.payload) {
+          providerName = "opay";
+        }
+      } catch {
+        // Not JSON / not an OPay callback — fall through to unknown provider handling
+      }
     }
 
     if (!providerName) {

@@ -100,7 +100,7 @@ const settingsSchema = z.object({
   }),
 
   paymentSettings: z.object({
-    activeProvider: z.enum(["monnify", "paystack"]),
+    activeProvider: z.enum(["monnify", "paystack", "opay"]),
     monnify: z.object({
       apiKey: z.string().optional().or(z.literal("")),
       secretKey: z.string().optional().or(z.literal("")),
@@ -114,6 +114,16 @@ const settingsSchema = z.object({
     paystack: z.object({
       publicKey: z.string().optional().or(z.literal("")),
       secretKey: z.string().optional().or(z.literal("")),
+    }),
+    opay: z.object({
+      publicKey: z.string().optional().or(z.literal("")),
+      secretKey: z.string().optional().or(z.literal("")),
+      merchantId: z.string().optional().or(z.literal("")),
+      baseUrl: z
+        .string()
+        .url("Must be a valid URL")
+        .optional()
+        .or(z.literal("")),
     }),
   }),
 
@@ -203,6 +213,12 @@ const DEFAULT_VALUES: SettingsForm = {
       baseUrl: "https://sandbox.monnify.com",
     },
     paystack: { publicKey: "", secretKey: "" },
+    opay: {
+      publicKey: "",
+      secretKey: "",
+      merchantId: "",
+      baseUrl: "https://sandboxapi.opaycheckout.com",
+    },
   },
   heroContent: {
     title: "",
@@ -338,6 +354,10 @@ export default function AdminSettingsPage() {
             paystack: {
               ...DEFAULT_VALUES.paymentSettings.paystack,
               ...data.paymentSettings?.paystack,
+            },
+            opay: {
+              ...DEFAULT_VALUES.paymentSettings.opay,
+              ...data.paymentSettings?.opay,
             },
           },
         });
@@ -959,6 +979,7 @@ export default function AdminSettingsPage() {
           >
             <option value="monnify">Monnify</option>
             <option value="paystack">Paystack</option>
+            <option value="opay">OPay</option>
           </select>
         </div>
 
@@ -1015,6 +1036,39 @@ export default function AdminSettingsPage() {
                 label="Secret Key"
                 type="password"
                 {...register("paymentSettings.paystack.secretKey")}
+              />
+            </div>
+          </div>
+
+          {/* OPay */}
+          <div className="p-5 border border-border rounded-xl space-y-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              OPay Configuration
+              {activeProvider === "opay" && (
+                <span className="text-[10px] bg-success-500/15 text-success-600 px-2 py-0.5 rounded-full uppercase font-bold tracking-wider">
+                  Active
+                </span>
+              )}
+            </h3>
+            <div className="grid gap-4 lg:grid-cols-2">
+              <Input
+                label="Public Key"
+                {...register("paymentSettings.opay.publicKey")}
+              />
+              <Input
+                label="Secret Key"
+                type="password"
+                {...register("paymentSettings.opay.secretKey")}
+              />
+              <Input
+                label="Merchant ID"
+                {...register("paymentSettings.opay.merchantId")}
+              />
+              <Input
+                label="Base URL"
+                placeholder="https://sandboxapi.opaycheckout.com"
+                {...register("paymentSettings.opay.baseUrl")}
+                error={errors.paymentSettings?.opay?.baseUrl?.message}
               />
             </div>
           </div>

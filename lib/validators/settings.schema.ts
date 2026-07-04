@@ -60,7 +60,9 @@ export const StoreSettingsSchema = z.object({
   heroSlides: z.array(HeroSlideSchema).max(5).optional(),
   paymentSettings: z
     .object({
-      activeProvider: z.enum(["monnify", "paystack"]).default("monnify"),
+      activeProvider: z
+        .enum(["monnify", "paystack", "opay"])
+        .default("monnify"),
       monnify: z
         .object({
           apiKey: z.string().optional().or(z.literal("")),
@@ -73,6 +75,14 @@ export const StoreSettingsSchema = z.object({
         .object({
           secretKey: z.string().optional().or(z.literal("")),
           publicKey: z.string().optional().or(z.literal("")),
+        })
+        .optional(),
+      opay: z
+        .object({
+          publicKey: z.string().optional().or(z.literal("")),
+          secretKey: z.string().optional().or(z.literal("")),
+          merchantId: z.string().optional().or(z.literal("")),
+          baseUrl: z.string().url("Invalid URL").optional().or(z.literal("")),
         })
         .optional(),
     })
